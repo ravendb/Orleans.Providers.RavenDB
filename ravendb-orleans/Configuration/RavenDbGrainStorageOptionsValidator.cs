@@ -4,10 +4,10 @@ namespace Orleans.Providers.RavenDB.Configuration
 {
     public sealed class RavenDbGrainStorageOptionsValidator : IConfigurationValidator
     {
-        private readonly RavenDbGrainStorageOptions _options;
+        private readonly RavenDbOptions _options;
         private readonly string _name;
 
-        public RavenDbGrainStorageOptionsValidator(RavenDbGrainStorageOptions options, string name)
+        public RavenDbGrainStorageOptionsValidator(RavenDbOptions options, string name)
         {
             _options = options;
             _name = name;

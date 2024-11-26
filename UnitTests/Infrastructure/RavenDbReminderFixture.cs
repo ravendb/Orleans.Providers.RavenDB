@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
-using Orleans.Providers.RavenDB.StorageProviders;
+using Orleans.Providers.RavenDB.Reminders;
 using Orleans.TestingHost;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
@@ -10,12 +10,14 @@ using TestExtensions;
 namespace UnitTests.Infrastructure;
 
 
-public class RavenDbStorageFixture : BaseTestClusterFixture
+public class RavenDbReminderFixture : BaseTestClusterFixture
 {
     public IDocumentStore DocumentStore;
+    //public IClusterClient ClusterClient;
 
-    //protected virtual string TestDatabase => "StorageTestsDatabase";
+    private const string TestDatabaseName = "OrleansReminders";
 
+    //private const string TestDatabaseName = "OrleansReminders";
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
@@ -32,17 +34,18 @@ public class RavenDbStorageFixture : BaseTestClusterFixture
             hostBuilder.UseOrleans((_, siloBuilder) =>
             {
                 siloBuilder
-                    .AddRavenDbGrainStorage("GrainStorageForTest", options =>
+                    //.UseLocalhostClustering()
+                    //.Configure<ClusterOptions>(options =>
+                    //{
+                    //    options.ClusterId = "test-cluster";
+                    //    options.ServiceId = "ReminderTestService";
+                    //})
+                    .AddRavenDbReminderTable(options =>
                     {
-                        options.DatabaseName = RavenDbPersistenceGrainTests.TestDatabaseName;
-                        options.Urls = [serverUrl];
+                        options.DatabaseName = TestDatabaseName;
+                        options.Urls = new[] { serverUrl };
                     })
-                    .AddRavenDbGrainStorageAsDefault(options =>
-                    {
-                        options.DatabaseName = RavenDbPersistenceGrainTests.TestDatabaseName;
-                        options.Urls = [serverUrl];
-                    })
-                    .AddMemoryGrainStorage("MemoryStore");
+                    .AddMemoryGrainStorageAsDefault();
             });
         }
     }
@@ -51,7 +54,7 @@ public class RavenDbStorageFixture : BaseTestClusterFixture
     {
         EmbeddedServer.Instance.StartServer();
 
-        DocumentStore = EmbeddedServer.Instance.GetDocumentStore(RavenDbPersistenceGrainTests.TestDatabaseName);
+        DocumentStore = EmbeddedServer.Instance.GetDocumentStore(TestDatabaseName);
 
         return base.InitializeAsync();
     }
@@ -60,7 +63,7 @@ public class RavenDbStorageFixture : BaseTestClusterFixture
     {
         try
         {
-            DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(RavenDbPersistenceGrainTests.TestDatabaseName, hardDelete: true));
+            DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(TestDatabaseName, hardDelete: true));
             DocumentStore.Dispose();
 
             EmbeddedServer.Instance.Dispose();

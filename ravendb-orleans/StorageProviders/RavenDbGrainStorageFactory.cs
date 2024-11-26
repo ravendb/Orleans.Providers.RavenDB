@@ -9,7 +9,7 @@ namespace Orleans.Providers.RavenDB.StorageProviders
     {
         public static IGrainStorage Create(IServiceProvider services, string name)
         {
-            var optionsMonitor = services.GetRequiredService<IOptionsMonitor<RavenDbGrainStorageOptions>>();
+            var optionsMonitor = services.GetRequiredService<IOptionsMonitor<RavenDbOptions>>();
             
             return ActivatorUtilities.CreateInstance<RavenDbGrainStorage>(services, optionsMonitor.Get(name));
         }

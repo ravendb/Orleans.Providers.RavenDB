@@ -3,7 +3,7 @@ using Raven.Client.Documents.Conventions;
 
 namespace Orleans.Providers.RavenDB.Configuration
 {
-    public class RavenDbGrainStorageOptions
+    public class RavenDbOptions
     {
         public string DatabaseName { get; set; }
 

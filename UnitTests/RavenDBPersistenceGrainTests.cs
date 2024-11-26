@@ -1,11 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-using Orleans.Hosting;
-using Orleans.Providers.RavenDB.StorageProviders;
-using Orleans.TestingHost;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide.Operations;
-using Raven.Embedded;
-using TestExtensions;
+﻿using TestExtensions;
 using TestExtensions.Runners;
 using UnitTests.Infrastructure;
 using Xunit;
@@ -14,13 +7,13 @@ using Xunit.Abstractions;
 namespace UnitTests
 {
     //[TestCategory("Persistence"), TestCategory("RavenDB")]
-    public class PersistenceGrainTests_RavenDBGrainStorage : OrleansTestingBase, IClassFixture<RavenDbStorageFixture>
+    public class RavenDbPersistenceGrainTests : OrleansTestingBase, IClassFixture<RavenDbStorageFixture>
     {
-        public const string TestDatabaseName = "TestDatabase";
+        public const string TestDatabaseName = "RavenDbPersistenceGrainTestDatabase";
         private readonly GrainPersistenceTestsRunner _runner;
 
 
-        public PersistenceGrainTests_RavenDBGrainStorage(ITestOutputHelper output, RavenDbStorageFixture fixture, string grainNamespace = "UnitTests.Grains")
+        public RavenDbPersistenceGrainTests(ITestOutputHelper output, RavenDbStorageFixture fixture, string grainNamespace = "UnitTests.Grains")
         {
             fixture.EnsurePreconditionsMet();
 

@@ -8,12 +8,12 @@ namespace Orleans.Providers.RavenDB.StorageProviders
 {
     public class RavenDbGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloLifecycle>
     {
-        private readonly RavenDbGrainStorageOptions _options;
+        private readonly RavenDbOptions _options;
         private readonly ILogger<RavenDbGrainStorage> _logger;
 
         private IDocumentStore _documentStore;
 
-        public RavenDbGrainStorage(RavenDbGrainStorageOptions options, ILogger<RavenDbGrainStorage> logger)
+        public RavenDbGrainStorage(RavenDbOptions options, ILogger<RavenDbGrainStorage> logger)
         {
             _options = options;
             _logger = logger;

@@ -1,9 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Orleans.Providers.RavenDB.Configuration;
 using Orleans.Runtime;
 using Orleans.Storage;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 
 namespace Orleans.Providers.RavenDB.Reminders
 {
@@ -30,11 +33,29 @@ namespace Orleans.Providers.RavenDB.Reminders
                 Certificate = _options.Certificate
             };
             _documentStore.Initialize();
+
+            var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
+            if (dbExists == false)
+                _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+
+            var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
+            if (indexes.Contains("ReminderDocument/ByHash"))
+                return;
+
+            try
+            {
+                new ReminderDocument_ByHash().Execute(_documentStore);
+            }
+            catch (Exception e)
+            {
+                _logger.Log(LogLevel.Error, e.Message);
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         public Task Init()
         {
-
             return Task.CompletedTask;
             //throw new NotImplementedException();
         }
@@ -58,23 +79,64 @@ namespace Orleans.Providers.RavenDB.Reminders
             return new ReminderTableData(entries);
         }
 
+        private class ReminderDocument_ByHash : AbstractIndexCreationTask<RavenDbReminderDocument, ReminderDocument_ByHash.Result>
+        {
+            public class Result
+            {
+                public uint Hash { get; init; }
+                public string GrainId { get; set; }
+                public string ReminderName { get; set; }
+                public DateTime StartAt { get; set; }
+                public TimeSpan Period { get; set; }
+
+            }
+
+            public ReminderDocument_ByHash()
+            {
+                Map = documents => from reminderDocument in documents
+                    let hash = reminderDocument.GrainId.GetHashCode()
+                    select new Result
+                    {
+                        Hash = (uint)hash,
+                        GrainId = reminderDocument.GrainId,
+                        ReminderName = reminderDocument.ReminderName,
+                        StartAt = reminderDocument.StartAt,
+                        Period = reminderDocument.Period
+                    };
+            }
+        }
+
         public async Task<ReminderTableData> ReadRows(uint begin, uint end)
         {
-            using var session = _documentStore.OpenAsyncSession();
-            var reminders = await session.Query<RavenDbReminderDocument>()
-                                         .Where(r => r.GrainId.GetHashCode() >= begin && GrainHashToRange(r.GrainId) < end)
-                                         .ToListAsync();
-
-            var entries = reminders.Select(r => new ReminderEntry
+            try
             {
-                GrainId =  GrainId.Parse(r.GrainId),
-                ReminderName =  r.ReminderName,
-                StartAt =  r.StartAt,
-                Period = r.Period,
-                ETag =  session.Advanced.GetChangeVectorFor(r)
-            }).ToList();
-            
-            return new ReminderTableData(entries);
+                using var session = _documentStore.OpenAsyncSession();
+                //var reminders = await session.Query<RavenDbReminderDocument>()
+                //    .Where(r => r.GrainId.GetHashCode() >= begin && r.GrainId.GetHashCode() < end)
+                //    .ToListAsync();
+
+                var reminders = await session.Query<ReminderDocument_ByHash.Result, ReminderDocument_ByHash>()
+                    .Where(doc => doc.Hash >= begin && doc.Hash < end)
+                    .ToListAsync();
+
+                var entries = reminders.Select(r => new ReminderEntry
+                {
+                    GrainId = GrainId.Parse(r.GrainId),
+                    ReminderName = r.ReminderName,
+                    StartAt = r.StartAt,
+                    Period = r.Period,
+                    ETag = session.Advanced.GetChangeVectorFor(r)
+                }).ToList();
+
+                return new ReminderTableData(entries);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+
         }
 
         public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
@@ -106,9 +168,9 @@ namespace Orleans.Providers.RavenDB.Reminders
             reminder.StartAt = entry.StartAt;
             reminder.Period = entry.Period;
             reminder.LastUpdated = DateTime.UtcNow;
-            reminder.HashCode = (uint)reminder.GrainId.GetHashCode();
+            //reminder.HashCode = (uint)reminder.GrainId.GetHashCode();
 
-            await session.StoreAsync(reminder, entry.ETag);
+            await session.StoreAsync(reminder, changeVector: entry.ETag, id: key);
             await session.SaveChangesAsync();
 
             return session.Advanced.GetChangeVectorFor(reminder);
@@ -141,8 +203,5 @@ namespace Orleans.Providers.RavenDB.Reminders
             
             await session.SaveChangesAsync();
         }
-
-        // Additional helper to hash and assign ranges.
-        private static uint GrainHashToRange(string grainId) => (uint)grainId.GetHashCode();
     }
 }

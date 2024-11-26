@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Orleans.Providers.RavenDB.Configuration
 {
-    public class RavenDbReminderOptions : RavenDbGrainStorageOptions
+    public class RavenDbReminderOptions : RavenDbOptions
     {
     }
 }

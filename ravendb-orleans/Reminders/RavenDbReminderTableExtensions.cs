@@ -1,6 +1,5 @@
 ﻿using Orleans.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Orleans.Providers.RavenDB.Configuration;
 
 namespace Orleans.Providers.RavenDB.Reminders
