@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.RavenDB.Reminders;
 using Orleans.TestingHost;
@@ -13,11 +14,8 @@ namespace UnitTests.Infrastructure;
 public class RavenDbReminderFixture : BaseTestClusterFixture
 {
     public IDocumentStore DocumentStore;
-    //public IClusterClient ClusterClient;
 
     private const string TestDatabaseName = "OrleansReminders";
-
-    //private const string TestDatabaseName = "OrleansReminders";
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
@@ -40,12 +38,21 @@ public class RavenDbReminderFixture : BaseTestClusterFixture
                     //    options.ClusterId = "test-cluster";
                     //    options.ServiceId = "ReminderTestService";
                     //})
+                    .Configure<GrainCollectionOptions>(options =>
+                    {
+                        options.DeactivationTimeout = TimeSpan.FromMinutes(10); // Prevent early deactivation
+                    })
                     .AddRavenDbReminderTable(options =>
                     {
                         options.DatabaseName = TestDatabaseName;
                         options.Urls = new[] { serverUrl };
                     })
-                    .AddMemoryGrainStorageAsDefault();
+                    .AddMemoryGrainStorageAsDefault()
+                    .Configure<ReminderOptions>(options =>
+                    {
+                        // Set a lower minimum reminder period for testing
+                        options.MinimumReminderPeriod = TimeSpan.FromSeconds(5);
+                    });
             });
         }
     }

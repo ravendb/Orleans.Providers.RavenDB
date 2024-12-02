@@ -14,7 +14,6 @@ namespace UnitTests
             _fixture = fixture;
         }
 
-
         [Fact]
         public async Task Counters_ReadWrite()
         {
@@ -222,8 +221,6 @@ namespace UnitTests
             var grain = _fixture.Client.GetGrain<ICounterGrain>(1234);
             var count = await grain.GetCount();
             Assert.Equal(numOfUpdates, count);
-
         }
-
     }
 }
