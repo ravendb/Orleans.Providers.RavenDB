@@ -46,6 +46,7 @@ public class RavenDbReminderFixture : BaseTestClusterFixture
                     {
                         options.DatabaseName = TestDatabaseName;
                         options.Urls = new[] { serverUrl };
+                        options.WaitForIndexesAfterSaveChanges = true;
                     })
                     .AddMemoryGrainStorageAsDefault()
                     .Configure<ReminderOptions>(options =>

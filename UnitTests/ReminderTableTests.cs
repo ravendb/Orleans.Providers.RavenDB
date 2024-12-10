@@ -300,5 +300,4 @@ public class ReminderTableTests : IClassFixture<RavenDbReminderFixture>
         }
     }
 
-
 }
