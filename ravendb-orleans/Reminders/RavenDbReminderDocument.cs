@@ -8,8 +8,8 @@
         public DateTime StartAt { get; set; }         // Initial due time for the reminder
         public TimeSpan Period { get; set; }          // Interval at which the reminder should fire
         public DateTime LastUpdated { get; set; }     // Last time the reminder was updated
-
-        //public uint HashCode { get; set; }
+        public uint HashCode { get; set; }
+        
         //public string ETag { get; set; }              // For optimistic concurrency
 
     }
