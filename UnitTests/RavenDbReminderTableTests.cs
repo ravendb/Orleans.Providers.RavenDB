@@ -25,6 +25,7 @@ public class RavenDbReminderTableTests : ReminderTableTestsBase
     protected override IReminderTable CreateRemindersTable()
     {
         // Start embedded RavenDB server
+
         EmbeddedServer.Instance.StartServer();
         var serverUrl = EmbeddedServer.Instance.GetServerUriAsync().GetAwaiter().GetResult().AbsoluteUri;
 
@@ -32,7 +33,7 @@ public class RavenDbReminderTableTests : ReminderTableTestsBase
         var options = new RavenDbReminderOptions
         {
             DatabaseName = "TestReminders",
-            Urls = new[] { serverUrl },
+            Urls = [serverUrl],
             WaitForIndexesAfterSaveChanges = true
         };
 

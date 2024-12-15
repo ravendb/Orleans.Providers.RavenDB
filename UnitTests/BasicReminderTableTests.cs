@@ -6,11 +6,11 @@ using Xunit;
 
 namespace UnitTests;
 
-public class ReminderTableTests : IClassFixture<RavenDbReminderFixture>
+public class BasicReminderTableTests : IClassFixture<RavenDbReminderFixture>
 {
     private readonly RavenDbReminderFixture _fixture;
 
-    public ReminderTableTests(RavenDbReminderFixture fixture)
+    public BasicReminderTableTests(RavenDbReminderFixture fixture)
     {
         _fixture = fixture;
     }

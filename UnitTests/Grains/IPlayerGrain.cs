@@ -9,5 +9,7 @@ namespace UnitTests.Grains
         Task Win();
         Task Lose();
         Task SetPlayerName(string name);
+        Task ForceDeactivate();
+
     }
 }

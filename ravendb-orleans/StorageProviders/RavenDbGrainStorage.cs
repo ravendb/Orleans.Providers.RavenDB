@@ -51,25 +51,6 @@ namespace Orleans.Providers.RavenDB.StorageProviders
 
                 grainState.State = storedData;
             }
-
-            /*if (storedData != null)
-            {
-                grainState.RecordExists = true;
-
-                if (existing.Contains(FieldDoc))
-                {
-                    grainState.ETag = existing[FieldEtag].AsString;
-
-                    grainState.State = serializer.Deserialize<T>(existing[FieldDoc]);
-                }
-                else
-                {
-                    existing.Remove(FieldId);
-
-                    grainState.State = serializer.Deserialize<T>(existing);
-                }
-            }*/
-
         }
 
         public async Task WriteAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
@@ -77,9 +58,18 @@ namespace Orleans.Providers.RavenDB.StorageProviders
             using var session = _documentStore.OpenAsyncSession();
             string key = GetKey<T>(stateName, grainId);
             var etag = grainState.ETag;
-
             await session.StoreAsync(grainState.State, changeVector: etag, id: key);
-            await session.SaveChangesAsync();
+
+            try
+            {
+                await session.SaveChangesAsync();
+            }
+            catch (Raven.Client.Exceptions.ConcurrencyException ex)
+            {
+                // todo: try to fix CodecNot Found on ConcurrencyException
+                //throw new OrleansException("Optimistic concurrency violation, transaction aborted.", ex);
+                throw new OrleansException($"Optimistic concurrency violation, transaction aborted. Error message : {Environment.NewLine}{ex.Message}");
+            }
         }
 
         public async Task ClearAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
@@ -130,7 +120,7 @@ namespace Orleans.Providers.RavenDB.StorageProviders
             }
         }
 
-        private static string GetKey<T>(string grainType, GrainId grainId)
+        internal static string GetKey<T>(string grainType, GrainId grainId)
         {
             var t = grainType != "state" ? grainType : typeof(T).Name;
             return $"{t}/{grainId}";

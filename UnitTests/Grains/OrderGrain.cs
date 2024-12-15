@@ -6,16 +6,20 @@ namespace UnitTests.Grains;
 [StorageProvider(ProviderName = "GrainStorageForTest")]
 public class OrderGrain : Grain<OrderState>, IOrderGrain
 {
-    internal Action ExecuteBetweenReadAndWrite = null;
+    private readonly ITestHook _testHook;
+
+
+    public OrderGrain(ITestHook testHook)
+    {
+        _testHook = testHook;
+    }
 
     public async Task SubmitOrder(Address address)
     {
-        //await ReadStateAsync();
+        await ReadStateAsync();
 
         State.ShipTo = address;
         State.Status = OrderStatus.Submitted;
-
-        ExecuteBetweenReadAndWrite?.Invoke();
 
         await WriteStateAsync();
     }
@@ -32,25 +36,22 @@ public class OrderGrain : Grain<OrderState>, IOrderGrain
         return State.TotalPrice;
     }
 
-    /*
-    public Task ExecuteBetweenReadAndWrite(Action action)
+    public Task ClearState()
     {
-        _executeBetweenReadAndWrite = action;
-        return Task.CompletedTask;
+        return ClearStateAsync();
     }
-    */
 
     public async Task AddItem(Product product)
     {
-        //await ReadStateAsync();
+        await ReadStateAsync();
 
         if (State.Status != OrderStatus.Open)
             throw new InvalidOperationException("Cannot add items to an order that was already submitted");
 
-        ExecuteBetweenReadAndWrite?.Invoke();
-
         State.Items.Add(product);
         State.TotalPrice += product.Price;
+
+        await _testHook.OnBeforeWriteStateAsync(); // Trigger the hook
 
         await WriteStateAsync();
     }

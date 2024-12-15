@@ -47,6 +47,12 @@ public class PlayerGrain : Grain<PlayerState>, IPlayerGrain
         await WriteStateAsync();
         // return Task.CompletedTask;
     }
+
+    public Task ForceDeactivate()
+    {
+        DeactivateOnIdle(); // Request immediate deactivation
+        return Task.CompletedTask;
+    }
 }
 
 // [Serializable]

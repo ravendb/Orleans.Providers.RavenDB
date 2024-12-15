@@ -2,6 +2,7 @@
 using UnitTests.Grains;
 using UnitTests.Infrastructure;
 using Xunit;
+using Orleans.Runtime;
 
 namespace UnitTests
 {
@@ -15,9 +16,115 @@ namespace UnitTests
         }
 
         [Fact]
-        public async Task Counters_ReadWrite()
+        public async Task GrainStorage_ShouldHandleLargeState()
         {
-            var grain = _fixture.Client.GetGrain<ICounterGrain>(1);
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            // Create a large state
+            var largeOrderItems = Enumerable.Range(0, 10_000)
+                .Select(i => new Product { Name = $"Product {i}", Price = i }).ToList();
+
+            foreach (var item in largeOrderItems)
+            {
+                await grain.AddItem(item);
+            }
+
+            var items = await grain.GetOrderItems();
+            Assert.Equal(10_000, items.Count);
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldHandleConcurrentWrites()
+        {
+            var grainIds = Enumerable.Range(1, 100).Select(id => _fixture.Client.GetGrain<ICounterGrain>(id)).ToList();
+
+            var tasks = grainIds.Select(async grain =>
+            {
+                await grain.Increment();
+                return await grain.GetCount();
+            });
+
+            var results = await Task.WhenAll(tasks);
+
+            foreach (var result in results)
+            {
+                Assert.Equal(1, result); // Ensure each grain updated independently
+            }
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldPersistStateAcrossDeactivation()
+        {
+            var grain = _fixture.Client.GetGrain<IPlayerGrain>(1);
+            await grain.SetPlayerName("Test Player");
+            await grain.Win();
+
+            // Force grain deactivation
+            await grain.ForceDeactivate();
+
+            // Wait briefly to allow deactivation
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            // Reactivate grain
+            var reactivatedGrain = _fixture.Client.GetGrain<IPlayerGrain>(1);
+            var name = await reactivatedGrain.GetPlayerName();
+            var score = await reactivatedGrain.GetPlayerScore();
+
+            Assert.Equal("Test Player", name);
+            Assert.Equal(1, score);
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldHandleInvalidETag()
+        {
+            var grainId = Guid.NewGuid();
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(grainId);
+
+            await grain.AddItem(new Product { Name = "Test Product", Price = 100 });
+
+            // Use the TestHook from the fixture
+            var testHook = _fixture.TestHook;
+
+            //var codec = ActivatorUtilities.CreateInstance<ConcurrencyExceptionCodec>(_fixture.HostedCluster.ServiceProvider);
+
+
+            testHook.OnBeforeWriteStateAsync = async () =>
+            {
+                using (var session = _fixture.DocumentStore.OpenAsyncSession())
+                {
+                    var docId = $"{nameof(OrderState)}/{grain.GetGrainId()}";
+                    var externalState = await session.LoadAsync<OrderState>(docId);
+
+                    externalState.TotalPrice += 5; // Simulate external modification
+                    await session.SaveChangesAsync();
+                }
+            };
+            // Attempt to modify the grain state again
+            var exception = await Assert.ThrowsAsync<OrleansException>(async () =>
+            {
+                await grain.AddItem(new Product { Name = "Product2", Price = 15 });
+            });
+
+            Assert.Contains("Optimistic concurrency violation", exception.Message);
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldHandleClearForNonExistentState()
+        {
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            // Clear state without prior writes
+            await grain.ClearState();
+
+            // Verify no exception is thrown and grain state is empty
+            var items = await grain.GetOrderItems();
+            Assert.Empty(items);
+        }
+
+        [Fact]
+        public async Task GrainStorage_CountersReadWrite()
+        {
+            var grain = _fixture.Client.GetGrain<ICounterGrain>(1000);
 
             var count = await grain.GetCount();
             Assert.Equal(0, count);
@@ -32,9 +139,9 @@ namespace UnitTests
         }
 
         [Fact]
-        public async Task PlayerGrain_ReadWrite()
+        public async Task GrainStorage_PlayerGrainReadWrite()
         {
-            var grain = _fixture.Client.GetGrain<IPlayerGrain>(1);
+            var grain = _fixture.Client.GetGrain<IPlayerGrain>(2);
             await grain.SetPlayerName("Avi Ron");
             var name = await grain.GetPlayerName();
             Assert.Equal("Avi Ron", name);
@@ -54,7 +161,7 @@ namespace UnitTests
         }
 
         [Fact]
-        public async Task Orders_ReadWrite()
+        public async Task GrainStorage_OrdersReadWrite()
         {
             var id = Guid.NewGuid();
             var order = _fixture.Client.GetGrain<IOrderGrain>(id);
@@ -108,58 +215,7 @@ namespace UnitTests
         }
 
         [Fact]
-        public async Task ShouldThrowConcurrencyException()
-        {
-            var orderId = Guid.NewGuid();
-            var order = _fixture.Client.GetGrain<IOrderGrain>(orderId);
-
-            await order.AddItem(new Product
-            {
-                Name = "milk",
-                Price = 5
-            });
-
-            await order.AddItem(new Product
-            {
-                Name = "coffee",
-                Price = 25
-            });
-
-            var items = await order.GetOrderItems();
-            Assert.Equal(2, items.Count);
-
-            using (var session = _fixture.DocumentStore.OpenAsyncSession())
-            {
-                var docId = $"{nameof(OrderState)}/{order.GetGrainId()}";
-                var doc = await session.LoadAsync<OrderState>(docId);
-                doc.ShipTo = new Address
-                {
-                    Name = "Jerry Garcia",
-                    Street = "Ashbury 42",
-                    City = "San Fransisco CA",
-                    Country = "USA",
-                    ZipCode = 9765432
-                };
-                await session.SaveChangesAsync();
-            }
-
-            var submitOrderAttempt = order.SubmitOrder(new Address
-            {
-                Name = "ayende",
-                Street = "11 Aehad Ha'Am",
-                City = "Hadera",
-                Country = "Israel",
-                ZipCode = 12345678
-            });
-
-            //var ex = await Assert.ThrowsAsync<OrleansException>(async () => await submitOrderAttempt);
-
-            //Assert.Contains("Optimistic concurrency violation, transaction will be aborted", ex.Message);
-
-        }
-
-        [Fact]
-        public async Task UserGrain_Read_Write()
+        public async Task GrainStorage_UserGrainRead_Write()
         {
             Guid id = Guid.NewGuid();
             IUser userGrain = _fixture.Client.GetGrain<IUser>(id);
@@ -198,7 +254,7 @@ namespace UnitTests
 
 
         [Fact]
-        public async Task CountersStress()
+        public async Task GrainStorage_CountersStress()
         {
             var numOfUpdates = 10_000;
             List<Task> tasks = [];
