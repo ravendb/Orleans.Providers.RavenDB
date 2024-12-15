@@ -4,7 +4,7 @@ using Orleans.Providers.RavenDB.Configuration;
 
 namespace Orleans.Providers.RavenDB.Reminders
 {
-    public static class RavenDbReminderTableExtensions
+    public static class RavenDbMembershipTableExtensions
     {
         public static ISiloBuilder AddRavenDbReminderTable(this ISiloBuilder builder, Action<RavenDbReminderOptions> configureOptions)
         {
