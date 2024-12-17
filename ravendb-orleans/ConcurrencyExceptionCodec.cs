@@ -8,11 +8,6 @@ namespace Orleans.Providers.RavenDB;
 [RegisterSerializer]
 public sealed class ConcurrencyExceptionCodec : IFieldCodec<Raven.Client.Exceptions.ConcurrencyException>
 {
-    public ConcurrencyExceptionCodec()
-    {
-        Console.WriteLine("ConcurrencyExceptionCodec successfully registered!");
-    }
-
     public void WriteField<TBufferWriter>(ref Writer<TBufferWriter> writer, uint fieldIdDelta, Type expectedType, Raven.Client.Exceptions.ConcurrencyException value)
         where TBufferWriter : IBufferWriter<byte>
     {

@@ -6,7 +6,6 @@ using Orleans.Providers.RavenDB.StorageProviders;
 using Orleans.Serialization;
 using Orleans.Serialization.Codecs;
 using Orleans.TestingHost;
-using ProtoBuf.Serializers;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;

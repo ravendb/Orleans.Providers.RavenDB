@@ -1,22 +1,52 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Providers.RavenDB.Configuration;
 using Orleans.Runtime;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide;
 
 public class RavenDbMembershipTable : IMembershipTable
 {
     private readonly IDocumentStore _documentStore;
-    private readonly string _databaseName;
+    private readonly RavenDbMembershipOptions _options;
     private readonly ILogger<RavenDbMembershipTable> _logger;
+    private readonly string _databaseName;
 
-    public RavenDbMembershipTable(IOptions<RavenDbMembershipOptions> options, IDocumentStore documentStore, ILogger<RavenDbMembershipTable> logger)
+    public RavenDbMembershipTable(RavenDbMembershipOptions options, ILogger<RavenDbMembershipTable> logger)
     {
-        _documentStore = documentStore;
-        _databaseName = options.Value.DatabaseName;
+        _options = options;
         _logger = logger;
+        _databaseName = options.DatabaseName;
+        _documentStore = InitializeDocumentStore();
+    }
+
+    private IDocumentStore InitializeDocumentStore()
+    {
+        try
+        {
+            var store = new DocumentStore
+            {
+                Database = _options.DatabaseName,
+                Urls = _options.Urls,
+                Certificate = _options.Certificate
+            };
+            store.Initialize();
+
+            // Ensure the database exists
+            var dbExists = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
+            if (!dbExists)
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+
+            _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
+            return store;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize RavenDB DocumentStore.");
+            throw;
+        }
     }
 
     public async Task InitializeMembershipTable(bool tryInitTable)
@@ -68,13 +98,20 @@ public class RavenDbMembershipTable : IMembershipTable
 
     public async Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion)
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var document = ToDocument(entry);
+        var documentId = GetDocumentId(entry.SiloAddress); // Generate the document ID
 
+        using var session = _documentStore.OpenAsyncSession(_databaseName);
+
+        // Check for existing entry to prevent conflicts
+        var existing = await session.LoadAsync<MembershipEntryDocument>(documentId);
+        if (existing != null)
+            return false; // Entry already exists
+        
         // Simulate table version handling
+        var document = ToDocument(entry);
         document.ETag = tableVersion.VersionEtag;
 
-        await session.StoreAsync(document);
+        await session.StoreAsync(document, documentId);
         await session.SaveChangesAsync();
 
         return true;
@@ -82,19 +119,30 @@ public class RavenDbMembershipTable : IMembershipTable
 
     public async Task<bool> UpdateRow(MembershipEntry entry, string etag, TableVersion tableVersion)
     {
+        var documentId = GetDocumentId(entry.SiloAddress);
+
         using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var documentId = GetDocumentId(entry.SiloAddress.ToParsableString()); // Convert SiloAddress to string
         var document = await session.LoadAsync<MembershipEntryDocument>(documentId);
 
         if (document == null || document.ETag != etag)
+            return false; // Document doesn't exist or ETag mismatch
+
+        //document = ToDocument(entry);
+        document.Status = entry.Status.ToString();
+        session.Advanced.UseOptimisticConcurrency = true;
+
+        try
         {
-            return false;
+            //await session.StoreAsync(document);
+            await session.SaveChangesAsync();
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
         }
 
-        document = ToDocument(entry);
-        session.Advanced.UseOptimisticConcurrency = true;
-        await session.StoreAsync(document);
-        await session.SaveChangesAsync();
 
         return true;
     }
@@ -102,7 +150,7 @@ public class RavenDbMembershipTable : IMembershipTable
     public async Task UpdateIAmAlive(MembershipEntry entry)
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var documentId = GetDocumentId(entry.SiloAddress.ToParsableString()); // Convert SiloAddress to string
+        var documentId = GetDocumentId(entry.SiloAddress); // Convert SiloAddress to string
         var document = await session.LoadAsync<MembershipEntryDocument>(documentId);
 
         if (document != null)
@@ -172,9 +220,9 @@ public class RavenDbMembershipTable : IMembershipTable
         };
     }
 
-    private string GetDocumentId(string siloAddress)
+    private string GetDocumentId(SiloAddress siloAddress)
     {
-        return $"Membership/{siloAddress}";
+        return $"Membership/{siloAddress.ToParsableString()}";
     }
 }
 
