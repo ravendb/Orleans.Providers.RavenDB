@@ -12,19 +12,10 @@ public class MembershipTestGrain : Grain, IMembershipTestGrain
         _membershipTable = membershipTable;
     }
 
-    public Task<bool> InitializeMembershipTable(bool tryInitTable)
+    public Task InitializeMembershipTable(bool tryInitTable)
     {
-        try
-        {
-            _membershipTable.InitializeMembershipTable(tryInitTable);
-        }
-        catch
-        {
-            return Task.FromResult(false);
-        }
-
-        // If no exception, initialization is successful
-        return Task.FromResult(true);
+        _membershipTable.InitializeMembershipTable(tryInitTable);
+        return Task.CompletedTask;
     }
 
     public Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion)
@@ -32,13 +23,28 @@ public class MembershipTestGrain : Grain, IMembershipTestGrain
         return _membershipTable.InsertRow(entry, tableVersion);
     }
 
+    public Task<bool> UpdateRow(MembershipEntry entry, string etag, TableVersion tableVersion)
+    {
+        return _membershipTable.UpdateRow(entry, etag, tableVersion);
+    }
+
     public Task<MembershipTableData> ReadRow(SiloAddress siloAddress)
     {
         return _membershipTable.ReadRow(siloAddress);
     }
 
+    public Task<MembershipTableData> ReadAll()
+    {
+        return _membershipTable.ReadAll();
+    }
+
     public Task CleanupDefunctSiloEntries(DateTimeOffset beforeDate)
     {
         return _membershipTable.CleanupDefunctSiloEntries(beforeDate);
+    }
+
+    public Task DeleteMembershipTableEntries(string clusterId)
+    {
+        return _membershipTable.DeleteMembershipTableEntries(clusterId);
     }
 }

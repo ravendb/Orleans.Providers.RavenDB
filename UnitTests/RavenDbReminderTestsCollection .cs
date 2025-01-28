@@ -2,7 +2,7 @@
 using UnitTests;
 using Xunit;
 
-[CollectionDefinition("RavenDbReminderTests")]
+[CollectionDefinition(TestEnvironmentFixture.DefaultCollection)]
 public class RavenDbReminderTestsCollection : ICollectionFixture<ConnectionStringFixture>, ICollectionFixture<TestEnvironmentFixture>
 {
     // This class has no code, and is never instantiated.

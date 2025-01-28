@@ -13,12 +13,14 @@ public class RavenDbMembershipTable : IMembershipTable
     private readonly RavenDbMembershipOptions _options;
     private readonly ILogger<RavenDbMembershipTable> _logger;
     private readonly string _databaseName;
+    private readonly string _clusterId;
 
     public RavenDbMembershipTable(RavenDbMembershipOptions options, ILogger<RavenDbMembershipTable> logger)
     {
         _options = options;
         _logger = logger;
         _databaseName = options.DatabaseName;
+        _clusterId = options.ClusterId;
         _documentStore = InitializeDocumentStore();
     }
 
@@ -81,19 +83,30 @@ public class RavenDbMembershipTable : IMembershipTable
 
     public async Task<MembershipTableData> ReadAll()
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var documents = await session.Query<MembershipEntryDocument>().ToListAsync();
+        try
+        {
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var documents = await session.Query<MembershipEntryDocument>()
+                .Where(doc => doc.ClusterId == _clusterId)
+                .ToListAsync();
 
-        var entriesWithETags = documents
-            .Select(doc => Tuple.Create(ToMembershipEntry(doc), doc.ETag ?? "0"))
-            .ToList();
+            var entriesWithETags = documents
+                .Select(doc => Tuple.Create(ToMembershipEntry(doc), doc.ETag ?? "0"))
+                .ToList();
 
-        // Derive the table version
-        var tableVersion = entriesWithETags.Any()
-            ? new TableVersion(0, entriesWithETags.Max(tuple => tuple.Item2)) // Max ETag for the version
-            : new TableVersion(0, "0"); // Default version if no entries
+            // Derive the table version
+            var tableVersion = entriesWithETags.Any()
+                ? new TableVersion(0, entriesWithETags.Max(tuple => tuple.Item2)) // Max ETag for the version
+                : new TableVersion(0, "0"); // Default version if no entries
 
-        return new MembershipTableData(entriesWithETags, tableVersion);
+            return new MembershipTableData(entriesWithETags, tableVersion);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+
     }
 
     public async Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion)
@@ -106,7 +119,10 @@ public class RavenDbMembershipTable : IMembershipTable
         var existing = await session.LoadAsync<MembershipEntryDocument>(documentId);
         if (existing != null)
             return false; // Entry already exists
-        
+            //throw new AccessViolationException("failed to insert - entry already exists!");
+        if (_options.WaitForIndexesAfterSaveChanges)
+            session.Advanced.WaitForIndexesAfterSaveChanges();
+
         // Simulate table version handling
         var document = ToDocument(entry);
         document.ETag = tableVersion.VersionEtag;
@@ -127,15 +143,15 @@ public class RavenDbMembershipTable : IMembershipTable
         if (document == null || document.ETag != etag)
             return false; // Document doesn't exist or ETag mismatch
 
-        //document = ToDocument(entry);
-        document.Status = entry.Status.ToString();
+        UpdateDocument();
+
         session.Advanced.UseOptimisticConcurrency = true;
+        if (_options.WaitForIndexesAfterSaveChanges)
+            session.Advanced.WaitForIndexesAfterSaveChanges();
 
         try
         {
-            //await session.StoreAsync(document);
             await session.SaveChangesAsync();
-
         }
         catch (Exception e)
         {
@@ -143,8 +159,19 @@ public class RavenDbMembershipTable : IMembershipTable
             throw;
         }
 
-
         return true;
+
+        void UpdateDocument()
+        {
+            document.SiloName = entry.SiloName;
+            document.SiloAddress = entry.SiloAddress.ToParsableString();
+            document.HostName = entry.HostName;
+            document.Status = entry.Status.ToString();
+            document.ProxyPort = entry.ProxyPort;
+            document.StartTime = entry.StartTime.ToUniversalTime();
+            document.IAmAliveTime = entry.IAmAliveTime.ToUniversalTime();
+            document.RoleName = entry.RoleName;
+        }
     }
 
     public async Task UpdateIAmAlive(MembershipEntry entry)
@@ -156,6 +183,9 @@ public class RavenDbMembershipTable : IMembershipTable
         if (document != null)
         {
             document.IAmAliveTime = entry.IAmAliveTime.ToUniversalTime();
+            if (_options.WaitForIndexesAfterSaveChanges)
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+
             await session.SaveChangesAsync();
         }
     }
@@ -209,6 +239,7 @@ public class RavenDbMembershipTable : IMembershipTable
     {
         return new MembershipEntryDocument
         {
+            ClusterId = _clusterId,
             SiloName = entry.SiloName,
             SiloAddress = entry.SiloAddress.ToParsableString(),
             HostName = entry.HostName,

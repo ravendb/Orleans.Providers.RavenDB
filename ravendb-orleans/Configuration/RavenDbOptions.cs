@@ -13,5 +13,7 @@ namespace Orleans.Providers.RavenDB.Configuration
 
         public string[] Urls { get; set; }
 
+        public bool WaitForIndexesAfterSaveChanges { get; set; }
+
     }
 }

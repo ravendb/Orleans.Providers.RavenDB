@@ -1,13 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Orleans.Hosting;
-using Orleans;
+﻿using Microsoft.Extensions.Hosting;
 using Orleans.TestingHost;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
 using TestExtensions;
+using UnitTests.Grains;
 
 namespace UnitTests.Infrastructure;
 
@@ -16,7 +13,9 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
 {
     public IDocumentStore DocumentStore;
 
-    private const string TestDatabaseName = "TestMembership";
+    public const string ClusterId = "TestCluster"; 
+
+    public const string TestDatabaseName = "TestMembership";
 
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
@@ -24,8 +23,6 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
         builder.Options.InitialSilosCount = 2; // For distributed testing
 
         builder.AddSiloBuilderConfigurator<SiloConfigurator>();
-
-        builder.AddClientBuilderConfigurator<ClientConfigurator>();
 
     }
 
@@ -41,21 +38,13 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
                 {
                     options.Urls = [serverUrl];
                     options.DatabaseName = TestDatabaseName;
+                    options.ClusterId = ClusterId;
+                    options.WaitForIndexesAfterSaveChanges = true;
                 });
             });
         }
     }
 
-    private class ClientConfigurator : IClientBuilderConfigurator
-    {
-        public void Configure(IConfiguration configuration, IClientBuilder clientBuilder)
-        {
-            clientBuilder.ConfigureServices(services =>
-            {
-                services.AddSingleton<IMembershipTable, RavenDbMembershipTable>();
-            });
-        }
-    }
 
     public override Task InitializeAsync()
     {
@@ -66,10 +55,16 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
         return base.InitializeAsync();
     }
 
-    public override Task DisposeAsync()
+    public override async Task DisposeAsync()
     {
         try
         {
+            var grain = Client.GetGrain<IMembershipTestGrain>("Cleanup");
+            await grain.DeleteMembershipTableEntries(ClusterId);
+
+            if (HostedCluster != null)
+                await HostedCluster.StopAllSilosAsync(); // Stop the cluster first
+            
             DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(TestDatabaseName, hardDelete: true));
             DocumentStore.Dispose();
             EmbeddedServer.Instance.Dispose();
@@ -79,7 +74,7 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
             // Ignored
         }
 
-        return base.DisposeAsync();
+        await base.DisposeAsync();
     }
 }
 

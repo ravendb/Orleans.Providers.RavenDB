@@ -3,10 +3,20 @@ using Orleans.Runtime;
 
 namespace UnitTests.Grains;
 
-public interface IMembershipTestGrain : IGrainWithIntegerKey
+public interface IMembershipTestGrain : IGrainWithStringKey
 {
-    Task<bool> InitializeMembershipTable(bool tryInitTable);
+    Task InitializeMembershipTable(bool tryInitTable);
+
     Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion);
+
+    Task<bool> UpdateRow(MembershipEntry entry, string etag, TableVersion tableVersion);
+
     Task<MembershipTableData> ReadRow(SiloAddress siloAddress);
+
+    Task<MembershipTableData> ReadAll();
+
     Task CleanupDefunctSiloEntries(DateTimeOffset beforeDate);
+
+    Task DeleteMembershipTableEntries(string clusterId);
+
 }

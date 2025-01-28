@@ -9,7 +9,9 @@ using UnitTests;
 using UnitTests.RemindersTest;
 using Xunit;
 
-[Collection("RavenDbReminderTests")]
+//[Collection("RavenDbReminderTests")]
+[TestCategory("Reminders")]
+
 public class RavenDbReminderTableTests : ReminderTableTestsBase
 {
     public RavenDbReminderTableTests(ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
