@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Providers.RavenDB.Configuration;
 using System.Net;
+using Orleans.Providers.RavenDB.Membership;
 using SiloAddressClass = Orleans.Runtime.SiloAddress;
 
 
@@ -24,7 +25,7 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
         _logger = logger;
     }
 
-    public async Task InitializeGatewayListProvider()
+    public Task InitializeGatewayListProvider()
     {
         _documentStore = new DocumentStore
         {
@@ -33,7 +34,8 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
         }.Initialize();
 
         _logger.LogInformation("Initializing RavenDB Gateway List Provider");
-        await Task.CompletedTask;
+
+        return Task.CompletedTask;
     }
 
     public async Task<IList<Uri>> GetGateways()
@@ -43,16 +45,16 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
             .Where(entry => entry.ClusterId == _options.ClusterId && entry.Status == SiloStatus.Active.ToString() && entry.ProxyPort > 0)
             .ToListAsync();
 
-        var result = gateways.Select(ToGatewayUri).ToList();
+        _logger.LogInformation("Retrieved {Count} active gateways from RavenDB", gateways.Count);
 
-        _logger.LogInformation("Retrieved {Count} active gateways from RavenDB", result.Count);
-        return result;
+        return gateways.Select(ToGatewayUri).ToList();
     }
 
     private static Uri ToGatewayUri(MembershipEntryDocument membershipDocument)
     {
         var siloAddress = SiloAddressClass.FromParsableString(membershipDocument.SiloAddress);
+        var ep = new IPEndPoint(siloAddress.Endpoint.Address, membershipDocument.ProxyPort);
 
-        return SiloAddressClass.New(new IPEndPoint(siloAddress.Endpoint.Address, membershipDocument.ProxyPort), siloAddress.Generation).ToGatewayUri();
+        return SiloAddressClass.New(ep, siloAddress.Generation).ToGatewayUri();
     }
 }
