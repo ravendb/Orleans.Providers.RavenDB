@@ -20,7 +20,7 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
-        builder.Options.InitialSilosCount = 2; // For distributed testing
+        builder.Options.InitialSilosCount = 2;
 
         builder.AddSiloBuilderConfigurator<SiloConfigurator>();
 

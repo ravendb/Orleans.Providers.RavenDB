@@ -22,4 +22,10 @@ public interface IReminderGrainForTesting : IGrainWithIntegerKey
 
     Task ForceDeactivate();
 
+    Task<int> GetTotalReminderTriggerCount();
+
+    Task<Dictionary<string, DateTime>> GetReminderTriggerTimes();
+
+    Task AddExpiringReminder(string reminderName, TimeSpan dueTime, TimeSpan period, int maxTriggers);
+
 }

@@ -252,7 +252,6 @@ namespace UnitTests
             Assert.Equal(name2, await friends[1].GetName());
         }
 
-
         [Fact]
         public async Task GrainStorage_CountersStress()
         {
@@ -278,5 +277,97 @@ namespace UnitTests
             var count = await grain.GetCount();
             Assert.Equal(numOfUpdates, count);
         }
+
+        [Fact]
+        public async Task GrainStorage_ShouldRecoverFromPartialFailure()
+        {
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            await grain.AddItem(new Product { Name = "Initial Item", Price = 10 });
+
+            // Simulate a failure mid-operation
+            var testHook = _fixture.TestHook;
+            testHook.OnBeforeWriteStateAsync = async () =>
+            {
+                throw new Exception("Simulated failure after modifying state");
+            };
+
+            await Assert.ThrowsAsync<Exception>(async () => await grain.AddItem(new Product { Name = "Should Fail", Price = 15 }));
+
+            // Remove the failure simulation
+            testHook.OnBeforeWriteStateAsync = null;
+
+            var items = await grain.GetOrderItems();
+            Assert.Single(items); // Ensure only the initial item exists
+            Assert.Equal("Initial Item", items[0].Name);
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldTimeoutIfStorageIsSlow()
+        {
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            var testHook = _fixture.TestHook;
+            testHook.OnBeforeWriteStateAsync = async () => await Task.Delay(TimeSpan.FromSeconds(5));
+
+            var timeoutTask = Task.Run(async () =>
+            {
+                await grain.AddItem(new Product { Name = "Delayed Item", Price = 10 });
+            });
+
+            var completed = await Task.WhenAny(timeoutTask, Task.Delay(TimeSpan.FromSeconds(3)));
+            Assert.NotEqual(timeoutTask, completed); // Should timeout before completing
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldHandleBulkDeactivationAndRehydration()
+        {
+            var grainIds = Enumerable.Range(0, 100).Select(i => _fixture.Client.GetGrain<IPlayerGrain>(i)).ToList();
+
+            foreach (var grain in grainIds)
+            {
+                await grain.SetPlayerName($"Player {grain.GetGrainId()}");
+                await grain.Win();
+            }
+
+            foreach (var grain in grainIds)
+            {
+                await grain.ForceDeactivate();
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(5)); // Wait for deactivation
+
+            foreach (var grain in grainIds)
+            {
+                var name = await grain.GetPlayerName();
+                var score = await grain.GetPlayerScore();
+                Assert.Equal($"Player {grain.GetGrainId()}", name);
+                Assert.Equal(1, score);
+            }
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldHandleHighThroughput()
+        {
+            int numOperations = 5000;
+            var start = 10_000;
+            var tasks = Enumerable.Range(start, numOperations)
+                .Select(async i =>
+                {
+                    var grain = _fixture.Client.GetGrain<ICounterGrain>(i);
+                    await grain.Increment();
+                });
+
+            await Task.WhenAll(tasks);
+
+            foreach (var i in Enumerable.Range(start, numOperations))
+            {
+                var grain = _fixture.Client.GetGrain<ICounterGrain>(i);
+                var count = await grain.GetCount();
+                Assert.Equal(1, count);
+            }
+        }
+
+
     }
 }

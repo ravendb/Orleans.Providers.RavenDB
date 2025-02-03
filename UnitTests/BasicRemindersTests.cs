@@ -300,4 +300,125 @@ public class BasicRemindersTests : IClassFixture<RavenDbReminderFixture>
         }
     }
 
+    [Fact]
+    public async Task Test_ReminderExecutionOrder()
+    {
+        var testGrainId = 16;
+        var grain = _fixture.Client.GetGrain<IReminderGrainForTesting>(testGrainId);
+
+        var reminder1 = "reminder-earlier";
+        var reminder2 = "reminder-later";
+
+        // Register two reminders with different start times
+        await grain.AddReminder(reminder1, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(20));
+        await grain.AddReminder(reminder2, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(20));
+
+        // Wait for the reminders to trigger
+        await Task.Delay(TimeSpan.FromSeconds(15));
+
+        // Get the timestamps of their first execution
+        var triggerTimes = await grain.GetReminderTriggerTimes();
+
+        Assert.True(triggerTimes[reminder1] < triggerTimes[reminder2],
+            "Reminder1 should have triggered before Reminder2");
+    }
+
+
+    //[Fact]
+    //public async Task Test_ReminderConsistency_AfterSiloRestart()
+    //{
+    //    var testGrainId = 17;
+    //    var reminderName = "persistent-reminder-after-restart";
+
+    //    var grain = _fixture.Client.GetGrain<IReminderGrainForTesting>(testGrainId);
+
+    //    // Register a reminder
+    //    await grain.AddReminder(reminderName, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10));
+
+    //    // Wait for it to trigger once
+    //    await Task.Delay(TimeSpan.FromSeconds(15));
+
+    //    // Stop and restart the silo
+    //    await _fixture.HostedCluster.StopAllSilosAsync();
+    //    await _fixture.HostedCluster.StartAdditionalSiloAsync();
+
+    //    // Wait for the grain to reactivate
+    //    await Task.Delay(TimeSpan.FromSeconds(10));
+
+    //    // Get the reminder trigger count after restart
+    //    var triggerCount = await grain.GetReminderTriggerCount(reminderName);
+    //    Assert.True(triggerCount > 0, "Reminder should still exist and trigger after a silo restart.");
+    //}
+
+    [Fact]
+    public async Task Test_HighLoad_ReminderRegistrations()
+    {
+        const int grainCount = 50;
+        const int remindersPerGrain = 5;
+        var grains = Enumerable.Range(0, grainCount)
+            .Select(i => _fixture.Client.GetGrain<IReminderGrainForTesting>(i))
+            .ToList();
+
+        // Register multiple reminders for each grain in parallel
+        var tasks = grains.SelectMany(grain =>
+            Enumerable.Range(0, remindersPerGrain)
+                .Select(i => grain.AddReminder($"reminder-{i}", TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(20))));
+
+        await Task.WhenAll(tasks);
+
+        // Wait for some triggers
+        await Task.Delay(TimeSpan.FromSeconds(40));
+
+        // Verify all reminders triggered at least once
+        foreach (var grain in grains)
+        {
+            var triggerCount = await grain.GetTotalReminderTriggerCount();
+            Assert.True(triggerCount > 0, "Each grain should have reminders triggered.");
+        }
+    }
+
+    [Fact]
+    public async Task Test_ConcurrentReminderDeletions()
+    {
+        var testGrainId = 18;
+        var grain = _fixture.Client.GetGrain<IReminderGrainForTesting>(testGrainId);
+
+        const int reminderCount = 10;
+        var reminderNames = Enumerable.Range(0, reminderCount).Select(i => $"reminder-{i}").ToList();
+
+        // Register multiple reminders
+        await Task.WhenAll(reminderNames.Select(name => grain.AddReminder(name)));
+
+        // Verify reminders exist
+        foreach (var name in reminderNames)
+            Assert.True(await grain.IsReminderExists(name), $"Reminder {name} should exist before deletion");
+
+        // Remove all reminders in parallel
+        await Task.WhenAll(reminderNames.Select(name => grain.RemoveReminder(name)));
+
+        // Verify all reminders are deleted
+        foreach (var name in reminderNames)
+            Assert.False(await grain.IsReminderExists(name), $"Reminder {name} should not exist after deletion");
+    }
+
+    [Fact]
+    public async Task Test_ReminderExpiration()
+    {
+        var testGrainId = 19;
+        var reminderName = "expiring-reminder";
+
+        var grain = _fixture.Client.GetGrain<IReminderGrainForTesting>(testGrainId);
+
+        // Register a reminder that should expire after 3 executions
+        await grain.AddExpiringReminder(reminderName, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5), 3);
+
+        // Wait for reminders to execute
+        await Task.Delay(TimeSpan.FromSeconds(20));
+
+        // Verify the reminder executed exactly 3 times and no more
+        var triggerCount = await grain.GetReminderTriggerCount(reminderName);
+        Assert.Equal(3, triggerCount);
+    }
+
+
 }

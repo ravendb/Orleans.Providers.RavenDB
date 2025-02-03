@@ -29,6 +29,9 @@ namespace UnitTests
         {
             var grain = _fixture.Client.GetGrain<IMembershipTestGrain>("1");
 
+            var currentData = await grain.ReadAll();
+            var nextVersion = currentData.Version.Next();
+
             var entry = new MembershipEntry
             {
                 SiloAddress = SiloAddress.New(new IPEndPoint(IPAddress.Loopback, 12345), 0),
@@ -40,8 +43,7 @@ namespace UnitTests
                 IAmAliveTime = DateTime.UtcNow
             };
 
-            var tableVersion = new TableVersion(1, "etag1");
-            var inserted = await grain.InsertRow(entry, tableVersion);
+            var inserted = await grain.InsertRow(entry, nextVersion);
 
             Assert.True(inserted);
 
@@ -120,9 +122,11 @@ namespace UnitTests
                 IAmAliveTime = DateTime.UtcNow
             };
 
-            var tableVersion = new TableVersion(1, "etag1");
-            await grain.InsertRow(entry1, tableVersion);
-            await grain.InsertRow(entry2, tableVersion);
+            var data = await grain.ReadAll();
+            var nextVersion = data.Version.Next();
+
+            await grain.InsertRow(entry1, nextVersion);
+            await grain.InsertRow(entry2, nextVersion.Next());
 
             // Read all entries
             var result = await grain.ReadAll();
@@ -150,13 +154,18 @@ namespace UnitTests
                 IAmAliveTime = DateTime.UtcNow
             };
 
-            var tableVersion = new TableVersion(1, "etag1");
-            await grain.InsertRow(entry, tableVersion);
+            var currentData = await grain.ReadAll();
+            var nextVersion = currentData.Version.Next();
+
+            Assert.True(await grain.InsertRow(entry, nextVersion));
 
             // Update entry
             entry.Status = SiloStatus.ShuttingDown;
             entry.ProxyPort = 6000;
-            var updated = await grain.UpdateRow(entry, "etag1", new TableVersion(2, "etag2"));
+            var readRow = await grain.ReadRow(entry.SiloAddress);
+            var etag = readRow.Members[0].Item2;
+
+            var updated = await grain.UpdateRow(entry, etag, nextVersion.Next());
 
             Assert.True(updated);
 

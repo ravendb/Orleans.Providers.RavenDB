@@ -4,9 +4,10 @@ namespace UnitTests.Grains;
 
 public class CounterGrain : Grain<CounterGrainState>, ICounterGrain
 {
-    public Task<int> GetCount()
+    public async Task<int> GetCount()
     {
-        return Task.FromResult(State.Count);
+        await ReadStateAsync();
+        return State.Count;
     }
 
     public async Task Increment()
