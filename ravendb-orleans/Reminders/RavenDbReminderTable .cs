@@ -31,7 +31,8 @@ namespace Orleans.Providers.RavenDB.Reminders
                 {
                     Database = _options.DatabaseName,
                     Urls = _options.Urls,
-                    Certificate = _options.Certificate
+                    Certificate = _options.Certificate,
+                    Conventions = _options.Conventions
                 };
                 _documentStore.Initialize();
 

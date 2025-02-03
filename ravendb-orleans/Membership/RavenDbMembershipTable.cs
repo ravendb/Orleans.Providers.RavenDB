@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide;
+using Raven.Client.Documents.Operations.Indexes;
 
 public class RavenDbMembershipTable : IMembershipTable
 {
@@ -34,17 +35,19 @@ public class RavenDbMembershipTable : IMembershipTable
             {
                 Database = _options.DatabaseName,
                 Urls = _options.Urls,
-                Certificate = _options.Certificate
+                Certificate = _options.Certificate,
+                Conventions = _options.Conventions
             };
             store.Initialize();
 
             // Ensure the database exists
             var dbExists = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
             if (dbExists == false)
-            {
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+
+            var indexes = store.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
+            if (indexes.Contains(nameof(MembershipByClusterId)) == false)
                 new MembershipByClusterId().Execute(store);
-            }
 
             _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
             return store;
