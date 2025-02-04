@@ -17,8 +17,6 @@ using Xunit;
 
 public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLifetime*/
 {
-    //private string _serverUrl;
-
     public RavenDbMembershipTableTests(ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
         : base(fixture, clusterFixture, new LoggerFilterOptions())
     {
@@ -26,7 +24,7 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
 
     protected override IGatewayListProvider CreateGatewayListProvider(ILogger logger)
     {
-        var serverUrl = GetConnectionString().GetAwaiter().GetResult(); // Ensure it's ready
+        var serverUrl = GetConnectionString().GetAwaiter().GetResult();
 
         var options = new RavenDbMembershipOptions
         {
@@ -41,7 +39,7 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
 
     protected override IMembershipTable CreateMembershipTable(ILogger logger)
     {
-        var serverUrl = GetConnectionString().GetAwaiter().GetResult(); // Ensure it's ready
+        var serverUrl = GetConnectionString().GetAwaiter().GetResult();
 
         var options = new RavenDbMembershipOptions
         {
@@ -129,8 +127,7 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
     {
         try
         {
-            var serverUrl = GetConnectionString().GetAwaiter().GetResult(); // Ensure it's ready
-
+            var serverUrl = GetConnectionString().GetAwaiter().GetResult();
 
             using var documentStore = new DocumentStore
             {

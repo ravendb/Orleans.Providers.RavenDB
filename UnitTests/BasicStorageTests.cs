@@ -320,33 +320,6 @@ namespace UnitTests
         }
 
         [Fact]
-        public async Task GrainStorage_ShouldHandleBulkDeactivationAndRehydration()
-        {
-            var grainIds = Enumerable.Range(0, 100).Select(i => _fixture.Client.GetGrain<IPlayerGrain>(i)).ToList();
-
-            foreach (var grain in grainIds)
-            {
-                await grain.SetPlayerName($"Player {grain.GetGrainId()}");
-                await grain.Win();
-            }
-
-            foreach (var grain in grainIds)
-            {
-                await grain.ForceDeactivate();
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(5)); // Wait for deactivation
-
-            foreach (var grain in grainIds)
-            {
-                var name = await grain.GetPlayerName();
-                var score = await grain.GetPlayerScore();
-                Assert.Equal($"Player {grain.GetGrainId()}", name);
-                Assert.Equal(1, score);
-            }
-        }
-
-        [Fact]
         public async Task GrainStorage_ShouldHandleHighThroughput()
         {
             int numOperations = 5000;

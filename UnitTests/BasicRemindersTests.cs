@@ -323,33 +323,6 @@ public class BasicRemindersTests : IClassFixture<RavenDbReminderFixture>
             "Reminder1 should have triggered before Reminder2");
     }
 
-
-    //[Fact]
-    //public async Task Test_ReminderConsistency_AfterSiloRestart()
-    //{
-    //    var testGrainId = 17;
-    //    var reminderName = "persistent-reminder-after-restart";
-
-    //    var grain = _fixture.Client.GetGrain<IReminderGrainForTesting>(testGrainId);
-
-    //    // Register a reminder
-    //    await grain.AddReminder(reminderName, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10));
-
-    //    // Wait for it to trigger once
-    //    await Task.Delay(TimeSpan.FromSeconds(15));
-
-    //    // Stop and restart the silo
-    //    await _fixture.HostedCluster.StopAllSilosAsync();
-    //    await _fixture.HostedCluster.StartAdditionalSiloAsync();
-
-    //    // Wait for the grain to reactivate
-    //    await Task.Delay(TimeSpan.FromSeconds(10));
-
-    //    // Get the reminder trigger count after restart
-    //    var triggerCount = await grain.GetReminderTriggerCount(reminderName);
-    //    Assert.True(triggerCount > 0, "Reminder should still exist and trigger after a silo restart.");
-    //}
-
     [Fact]
     public async Task Test_HighLoad_ReminderRegistrations()
     {

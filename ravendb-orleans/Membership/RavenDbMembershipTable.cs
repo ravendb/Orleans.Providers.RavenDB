@@ -23,7 +23,7 @@ public class RavenDbMembershipTable : IMembershipTable
         _options = options;
         _logger = logger;
         _databaseName = options.DatabaseName;
-        _clusterId = options.ClusterId;
+        _clusterId = options.ClusterId ?? Guid.NewGuid().ToString();
         _documentStore = InitializeDocumentStore();
     }
 
