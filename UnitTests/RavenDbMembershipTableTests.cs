@@ -4,19 +4,19 @@ using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Messaging;
 using Orleans.Providers.RavenDB.Configuration;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
 using TestExtensions;
 using UnitTests;
-using UnitTests.Infrastructure;
 using UnitTests.MembershipTests;
 using Xunit;
 
 [TestCategory("Membership")]
-
-public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLifetime*/
+public class RavenDbMembershipTableTests : MembershipTableTestsBase
 {
+
+    private const string MembershipTableTestsDatabase = "OrleansMembershipTableTests";
+
+
     public RavenDbMembershipTableTests(ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
         : base(fixture, clusterFixture, new LoggerFilterOptions())
     {
@@ -29,7 +29,7 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
         var options = new RavenDbMembershipOptions
         {
             Urls = new[] { serverUrl },
-            DatabaseName = RavenDbMembershipFixture.TestDatabaseName,
+            DatabaseName = MembershipTableTestsDatabase,
             ClusterId = clusterId,
             WaitForIndexesAfterSaveChanges = true
         };
@@ -44,7 +44,7 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
         var options = new RavenDbMembershipOptions
         {
             Urls = new[] { serverUrl },
-            DatabaseName = RavenDbMembershipFixture.TestDatabaseName,
+            DatabaseName = MembershipTableTestsDatabase,
             ClusterId = clusterId,
             WaitForIndexesAfterSaveChanges = true
         };
@@ -117,33 +117,4 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
     {
         await MembershipTable_UpdateIAmAlive();
     }
-
-    public Task InitializeAsync()
-    {
-        return Task.CompletedTask;
-    }
-
-    public async Task DisposeAsync()
-    {
-        try
-        {
-            var serverUrl = GetConnectionString().GetAwaiter().GetResult();
-
-            using var documentStore = new DocumentStore
-            {
-                Database = RavenDbMembershipFixture.TestDatabaseName,
-                Urls = [serverUrl]
-            }.Initialize();
-
-            await documentStore.Maintenance.Server.SendAsync(
-                new DeleteDatabasesOperation(RavenDbMembershipFixture.TestDatabaseName, hardDelete: true));
-
-            //EmbeddedServer.Instance.Dispose();
-        }
-        catch
-        {
-            // Ignored
-        }
-    }
-
 }

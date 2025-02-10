@@ -3,19 +3,16 @@ using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers.RavenDB.Reminders;
 using Orleans.TestingHost;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
-using TestExtensions;
 
 namespace UnitTests.Infrastructure;
 
 
-public class RavenDbReminderFixture : BaseTestClusterFixture
+public class RavenDbReminderFixture : RavenDbFixture
 {
-    public IDocumentStore DocumentStore;
+    protected override string TestDatabaseName => DbName;
 
-    private const string TestDatabaseName = "OrleansReminders";
+    private const string DbName = "TestReminders";
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
@@ -32,19 +29,13 @@ public class RavenDbReminderFixture : BaseTestClusterFixture
             hostBuilder.UseOrleans((_, siloBuilder) =>
             {
                 siloBuilder
-                    //.UseLocalhostClustering()
-                    //.Configure<ClusterOptions>(options =>
-                    //{
-                    //    options.ClusterId = "test-cluster";
-                    //    options.ServiceId = "ReminderTestService";
-                    //})
                     .Configure<GrainCollectionOptions>(options =>
                     {
                         options.DeactivationTimeout = TimeSpan.FromMinutes(10); // Prevent early deactivation
                     })
                     .AddRavenDbReminderTable(options =>
                     {
-                        options.DatabaseName = TestDatabaseName;
+                        options.DatabaseName = DbName;
                         options.Urls = new[] { serverUrl };
                         options.WaitForIndexesAfterSaveChanges = true;
                     })
@@ -55,32 +46,6 @@ public class RavenDbReminderFixture : BaseTestClusterFixture
                         options.MinimumReminderPeriod = TimeSpan.FromSeconds(5);
                     });
             });
-        }
-    }
-
-    public override Task InitializeAsync()
-    {
-        EmbeddedServer.Instance.StartServer();
-
-        DocumentStore = EmbeddedServer.Instance.GetDocumentStore(TestDatabaseName);
-
-        return base.InitializeAsync();
-    }
-
-    public override Task DisposeAsync()
-    {
-        try
-        {
-            DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(TestDatabaseName, hardDelete: true));
-            DocumentStore.Dispose();
-
-            EmbeddedServer.Instance.Dispose();
-
-            return base.DisposeAsync();
-        }
-        catch
-        {
-            return Task.CompletedTask;
         }
     }
 }

@@ -9,9 +9,7 @@ using UnitTests;
 using UnitTests.RemindersTest;
 using Xunit;
 
-//[Collection("RavenDbReminderTests")]
 [TestCategory("Reminders")]
-
 public class RavenDbReminderTableTests : ReminderTableTestsBase
 {
     public RavenDbReminderTableTests(ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
@@ -64,7 +62,6 @@ public class RavenDbReminderTableTests : ReminderTableTestsBase
     {
         await base.DisposeAsync();
 
-        // Clean up RavenDB resources
         (await EmbeddedServer.Instance.GetDocumentStoreAsync("TestReminders"))
             .Maintenance.Server.Send(new DeleteDatabasesOperation("TestReminders", hardDelete: true));
 

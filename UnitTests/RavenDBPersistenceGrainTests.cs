@@ -6,10 +6,10 @@ using Xunit.Abstractions;
 
 namespace UnitTests
 {
-    //[TestCategory("Persistence"), TestCategory("RavenDB")]
+    [TestCategory("Persistence")]
     public class RavenDbPersistenceGrainTests : OrleansTestingBase, IClassFixture<RavenDbStorageFixture>
     {
-        public const string TestDatabaseName = "RavenDbPersistenceGrainTestDatabase";
+        //public const string TestDatabaseName = "RavenDbPersistenceGrainTestDatabase";
         private readonly GrainPersistenceTestsRunner _runner;
 
 

@@ -6,24 +6,21 @@ using Orleans.Providers.RavenDB.StorageProviders;
 using Orleans.Serialization;
 using Orleans.Serialization.Codecs;
 using Orleans.TestingHost;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
-using TestExtensions;
 using UnitTests.Grains;
 
 namespace UnitTests.Infrastructure;
 
 
-public class RavenDbStorageFixture : BaseTestClusterFixture
+public class RavenDbStorageFixture : RavenDbFixture
 {
-    public IDocumentStore DocumentStore;
-
     public static RavenDbStorageFixture Instance { get; private set; }
 
     public DefaultTestHook TestHook { get; private set; } // Expose the hook as a property
 
-    //protected virtual string TestDatabase => "StorageTestsDatabase";
+    protected override string TestDatabaseName => DbName;
+
+    private const string DbName = "TestStorage";
 
     public RavenDbStorageFixture()
     {
@@ -61,42 +58,16 @@ public class RavenDbStorageFixture : BaseTestClusterFixture
                 siloBuilder
                     .AddRavenDbGrainStorage("GrainStorageForTest", options =>
                     {
-                        options.DatabaseName = RavenDbPersistenceGrainTests.TestDatabaseName;
+                        options.DatabaseName = DbName;
                         options.Urls = [serverUrl];
                     })
                     .AddRavenDbGrainStorageAsDefault(options =>
                     {
-                        options.DatabaseName = RavenDbPersistenceGrainTests.TestDatabaseName;
+                        options.DatabaseName = DbName;
                         options.Urls = [serverUrl];
                     })
                     .AddMemoryGrainStorage("MemoryStore");
             });
-        }
-    }
-
-    public override Task InitializeAsync()
-    {
-        EmbeddedServer.Instance.StartServer();
-
-        DocumentStore = EmbeddedServer.Instance.GetDocumentStore(RavenDbPersistenceGrainTests.TestDatabaseName);
-
-        return base.InitializeAsync();
-    }
-
-    public override Task DisposeAsync()
-    {
-        try
-        {
-            DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(RavenDbPersistenceGrainTests.TestDatabaseName, hardDelete: true));
-            DocumentStore.Dispose();
-
-            EmbeddedServer.Instance.Dispose();
-
-            return base.DisposeAsync();
-        }
-        catch
-        {
-            return Task.CompletedTask;
         }
     }
 }

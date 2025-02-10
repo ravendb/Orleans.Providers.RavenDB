@@ -58,9 +58,7 @@ namespace Orleans.Providers.RavenDB.Reminders
         public async Task<ReminderTableData> ReadRows(GrainId grainId)
         {
             using var session = _documentStore.OpenAsyncSession();
-            var reminders = await session.Query<RavenDbReminderDocument>()
-                                         .Where(r => r.GrainId == grainId.ToString())
-                                         .ToListAsync();
+            var reminders = await session.Advanced.LoadStartingWithAsync<RavenDbReminderDocument>($"reminders/{grainId}/");
 
             var entries = reminders.Select(r => new ReminderEntry
             {

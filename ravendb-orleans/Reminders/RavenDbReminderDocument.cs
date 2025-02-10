@@ -10,7 +10,5 @@
         public DateTime LastUpdated { get; set; }     // Last time the reminder was updated
         public uint HashCode { get; set; }
         
-        //public string ETag { get; set; }              // For optimistic concurrency
-
     }
 }

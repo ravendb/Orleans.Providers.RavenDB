@@ -1,22 +1,21 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Orleans.TestingHost;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
-using TestExtensions;
 using UnitTests.Grains;
 
 namespace UnitTests.Infrastructure;
 
 
-public class RavenDbMembershipFixture : BaseTestClusterFixture
+public class RavenDbMembershipFixture : RavenDbFixture
 {
-    public IDocumentStore DocumentStore;
+    //public IDocumentStore DocumentStore;
 
     public const string ClusterId = "TestCluster"; 
 
-    public const string TestDatabaseName = "TestMembership";
+    //public const string TestDatabaseName = "TestMembership";
+    protected override string TestDatabaseName => DbName;
 
+    public const string DbName = "TestMembership";
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
@@ -37,22 +36,12 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
                 siloBuilder.UseRavenDbMembershipTable(options =>
                 {
                     options.Urls = [serverUrl];
-                    options.DatabaseName = TestDatabaseName;
+                    options.DatabaseName = DbName;
                     options.ClusterId = ClusterId;
                     options.WaitForIndexesAfterSaveChanges = true;
                 });
             });
         }
-    }
-
-
-    public override Task InitializeAsync()
-    {
-        EmbeddedServer.Instance.StartServer();
-
-        DocumentStore = EmbeddedServer.Instance.GetDocumentStore(TestDatabaseName);
-
-        return base.InitializeAsync();
     }
 
     public override async Task DisposeAsync()
@@ -64,10 +53,6 @@ public class RavenDbMembershipFixture : BaseTestClusterFixture
 
             if (HostedCluster != null)
                 await HostedCluster.StopAllSilosAsync(); // Stop the cluster first
-            
-            DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(TestDatabaseName, hardDelete: true));
-            DocumentStore.Dispose();
-            EmbeddedServer.Instance.Dispose();
         }
         catch
         {
