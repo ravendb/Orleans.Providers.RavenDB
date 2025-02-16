@@ -1,17 +1,23 @@
 ﻿using Orleans;
 using Orleans.Providers;
+using Orleans.Runtime;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 
 namespace UnitTests.Grains;
 
 [StorageProvider(ProviderName = "GrainStorageForTest")]
 public class OrderGrain : Grain<OrderState>, IOrderGrain
 {
-    private readonly ITestHook _testHook;
+    //private readonly ITestHook _testHook;
 
+    private readonly IDocumentStore _store;
 
-    public OrderGrain(ITestHook testHook)
+    private string _script;
+
+    public OrderGrain(IDocumentStore store)
     {
-        _testHook = testHook;
+        _store = store;
     }
 
     public async Task SubmitOrder(Address address)
@@ -41,7 +47,14 @@ public class OrderGrain : Grain<OrderState>, IOrderGrain
         return ClearStateAsync();
     }
 
-    public async Task AddItem(Product product)
+    public Task OnBeforeWriteStateAsync(string script)
+    {
+        _script = script;
+
+        return Task.CompletedTask;
+    }
+
+    public virtual async Task AddItem(Product product)
     {
         await ReadStateAsync();
 
@@ -51,7 +64,29 @@ public class OrderGrain : Grain<OrderState>, IOrderGrain
         State.Items.Add(product);
         State.TotalPrice += product.Price;
 
-        await _testHook.OnBeforeWriteStateAsync(); // Trigger the hook
+        if (string.IsNullOrEmpty(_script) == false)
+        {
+
+            try
+            {
+                var docId = $"{nameof(OrderState)}/{this.GetGrainId()}";
+
+                await _store.Operations.SendAsync(new PatchOperation(docId, changeVector: null, new PatchRequest
+                {
+                    Script = _script
+                }));
+            }
+            catch (Exception e)
+            {
+                throw new OrleansException(e.Message);
+            }
+
+        }
+
+
+        //await OnBeforeWriteStateAsync(product);
+
+        //await _testHook.OnBeforeWriteStateAsync(); // Trigger the hook
 
         await WriteStateAsync();
     }

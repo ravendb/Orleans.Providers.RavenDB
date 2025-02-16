@@ -13,14 +13,11 @@ public class RavenDbMembershipFixture : RavenDbFixture
     public const string ClusterId = "TestCluster"; 
 
     //public const string TestDatabaseName = "TestMembership";
-    protected override string TestDatabaseName => DbName;
-
-    public const string DbName = "TestMembership";
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
         builder.Options.InitialSilosCount = 2;
-
+        builder.Properties["Database"] = TestDatabaseName;
         builder.AddSiloBuilderConfigurator<SiloConfigurator>();
 
     }
@@ -30,13 +27,13 @@ public class RavenDbMembershipFixture : RavenDbFixture
         public void Configure(IHostBuilder hostBuilder)
         {
             var serverUrl = EmbeddedServer.Instance.GetServerUriAsync().GetAwaiter().GetResult().AbsoluteUri;
-
+            
             hostBuilder.UseOrleans((_, siloBuilder) =>
             {
                 siloBuilder.UseRavenDbMembershipTable(options =>
                 {
                     options.Urls = [serverUrl];
-                    options.DatabaseName = DbName;
+                    options.DatabaseName = hostBuilder.GetConfigurationValue("Database");
                     options.ClusterId = ClusterId;
                     options.WaitForIndexesAfterSaveChanges = true;
                 });

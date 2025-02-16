@@ -4,65 +4,79 @@ using Microsoft.Extensions.Options;
 using Orleans;
 using Orleans.Messaging;
 using Orleans.Providers.RavenDB.Configuration;
+using Raven.Client.Documents;
+using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
 using TestExtensions;
 using UnitTests;
+using UnitTests.Infrastructure;
 using UnitTests.MembershipTests;
 using Xunit;
 
 [TestCategory("Membership")]
-public class RavenDbMembershipTableTests : MembershipTableTestsBase
+public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLifetime*/, IClassFixture<RavenDbFixture>
 {
+    private static string MembershipTableTestsDatabase = "OrleansMembershipTableTests-" + Guid.NewGuid();
+    private readonly RavenDbFixture _fixture;
+    private RavenDbMembershipTable _membershipTable;
 
-    private const string MembershipTableTestsDatabase = "OrleansMembershipTableTests";
-
-
-    public RavenDbMembershipTableTests(ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
+    public RavenDbMembershipTableTests(ConnectionStringFixture fixture, RavenDbFixture ravenDbFixture, TestEnvironmentFixture clusterFixture)
         : base(fixture, clusterFixture, new LoggerFilterOptions())
     {
+        _fixture = ravenDbFixture;
     }
+
+    //public Task InitializeAsync()
+    //{
+    //    //MembershipOptions.DatabaseName = _fixture.TestDatabaseName;
+    //    //MembershipOptions.Urls = [RavenDbFixture.ServerUrl.AbsoluteUri];
+
+    //    return Task.CompletedTask;
+    //}
 
     protected override IGatewayListProvider CreateGatewayListProvider(ILogger logger)
     {
-        var serverUrl = GetConnectionString().GetAwaiter().GetResult();
+        //var serverUrl = GetConnectionString().GetAwaiter().GetResult();
 
-        var options = new RavenDbMembershipOptions
-        {
-            Urls = new[] { serverUrl },
-            DatabaseName = MembershipTableTestsDatabase,
-            ClusterId = clusterId,
-            WaitForIndexesAfterSaveChanges = true
-        };
+        //var options = new RavenDbMembershipOptions
+        //{
+        //    Urls = new[] { serverUrl },
+        //    DatabaseName = MembershipTableTestsDatabase,
+        //    ClusterId = clusterId,
+        //    WaitForIndexesAfterSaveChanges = true
+        //};
 
-        return new RavenDbGatewayListProvider(Options.Create(options), logger);
+        return new RavenDbGatewayListProvider(Options.Create(MembershipOptions), logger);
     }
 
     protected override IMembershipTable CreateMembershipTable(ILogger logger)
     {
-        var serverUrl = GetConnectionString().GetAwaiter().GetResult();
+        //var serverUrl = GetConnectionString().GetAwaiter().GetResult();
 
-        var options = new RavenDbMembershipOptions
+        MembershipOptions = new RavenDbMembershipOptions
         {
-            Urls = new[] { serverUrl },
+            Urls = new[] { RavenDbFixture.ServerUrl.AbsoluteUri },
             DatabaseName = MembershipTableTestsDatabase,
             ClusterId = clusterId,
             WaitForIndexesAfterSaveChanges = true
         };
 
-        return new RavenDbMembershipTable(options, NullLogger<RavenDbMembershipTable>.Instance);
+        _membershipTable = new RavenDbMembershipTable(MembershipOptions, NullLogger<RavenDbMembershipTable>.Instance);
+        return _membershipTable;
     }
+
+    public RavenDbMembershipOptions MembershipOptions { get; set; }
 
     protected override async Task<string> GetConnectionString()
     {
-        return (await _lazyServerUrl.Value).AbsoluteUri;
-
+        return RavenDbFixture.ServerUrl.AbsoluteUri;
     }
 
-    private static readonly Lazy<Task<Uri>> _lazyServerUrl = new(() =>
-    {
-        EmbeddedServer.Instance.StartServer();
-        return EmbeddedServer.Instance.GetServerUriAsync();
-    });
+    //private static readonly Lazy<Task<Uri>> _lazyServerUrl = new(() =>
+    //{
+    //    EmbeddedServer.Instance.StartServer();
+    //    return EmbeddedServer.Instance.GetServerUriAsync();
+    //});
 
     [Fact]
     public async Task Test_CleanupDefunctSiloEntries()
@@ -117,4 +131,14 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase
     {
         await MembershipTable_UpdateIAmAlive();
     }
+
+
+
+    //public async Task DisposeAsync()
+    //{
+    //    //await _membershipTable.DeleteMembershipTableEntries(clusterId);
+    //    _membershipTable = null;
+    //    Dispose();
+    //    //await _fixture.DocumentStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(MembershipTableTestsDatabase, hardDelete: true));
+    //}
 }

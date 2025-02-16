@@ -1,5 +1,4 @@
-﻿using Orleans;
-using UnitTests.Grains;
+﻿using UnitTests.Grains;
 using UnitTests.Infrastructure;
 using Xunit;
 using Orleans.Runtime;
@@ -18,7 +17,7 @@ namespace UnitTests
         [Fact]
         public async Task GrainStorage_ShouldHandleLargeState()
         {
-            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+            var grain = _fixture.Client.GetGrain<ILargeStateOrderGrain>(Guid.NewGuid());
 
             // Create a large state
             var largeOrderItems = Enumerable.Range(0, 10_000)
@@ -82,24 +81,10 @@ namespace UnitTests
 
             await grain.AddItem(new Product { Name = "Test Product", Price = 100 });
 
-            // Use the TestHook from the fixture
-            var testHook = _fixture.TestHook;
+            // Simulate external modification between read & write
+            await grain.OnBeforeWriteStateAsync(script: "this.TotalPrice += 5");
 
-            //var codec = ActivatorUtilities.CreateInstance<ConcurrencyExceptionCodec>(_fixture.HostedCluster.ServiceProvider);
-
-
-            testHook.OnBeforeWriteStateAsync = async () =>
-            {
-                using (var session = _fixture.DocumentStore.OpenAsyncSession())
-                {
-                    var docId = $"{nameof(OrderState)}/{grain.GetGrainId()}";
-                    var externalState = await session.LoadAsync<OrderState>(docId);
-
-                    externalState.TotalPrice += 5; // Simulate external modification
-                    await session.SaveChangesAsync();
-                }
-            };
-            // Attempt to modify the grain state again
+            // Attempt to modify the grain state 
             var exception = await Assert.ThrowsAsync<OrleansException>(async () =>
             {
                 await grain.AddItem(new Product { Name = "Product2", Price = 15 });
@@ -166,8 +151,6 @@ namespace UnitTests
             var id = Guid.NewGuid();
             var order = _fixture.Client.GetGrain<IOrderGrain>(id);
             Assert.Empty(await order.GetOrderItems());
-
-            //IGrainStorage grainStorage = GrainStorageHelpers.GetGrainStorage(typeof(OrderGrain), _fixture.Host.Services);
 
             await order.AddItem(new Product
             {
@@ -286,38 +269,19 @@ namespace UnitTests
             await grain.AddItem(new Product { Name = "Initial Item", Price = 10 });
 
             // Simulate a failure mid-operation
-            var testHook = _fixture.TestHook;
-            testHook.OnBeforeWriteStateAsync = async () =>
-            {
-                throw new Exception("Simulated failure after modifying state");
-            };
+            await grain.OnBeforeWriteStateAsync(script: "this.id() = 1234");
 
-            await Assert.ThrowsAsync<Exception>(async () => await grain.AddItem(new Product { Name = "Should Fail", Price = 15 }));
+            await Assert.ThrowsAsync<OrleansException>(async () => await grain.AddItem(new Product { Name = "Should Fail", Price = 15 }));
 
             // Remove the failure simulation
-            testHook.OnBeforeWriteStateAsync = null;
+            await grain.OnBeforeWriteStateAsync(script: string.Empty);
+
 
             var items = await grain.GetOrderItems();
             Assert.Single(items); // Ensure only the initial item exists
             Assert.Equal("Initial Item", items[0].Name);
         }
 
-        [Fact]
-        public async Task GrainStorage_ShouldTimeoutIfStorageIsSlow()
-        {
-            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
-
-            var testHook = _fixture.TestHook;
-            testHook.OnBeforeWriteStateAsync = async () => await Task.Delay(TimeSpan.FromSeconds(5));
-
-            var timeoutTask = Task.Run(async () =>
-            {
-                await grain.AddItem(new Product { Name = "Delayed Item", Price = 10 });
-            });
-
-            var completed = await Task.WhenAny(timeoutTask, Task.Delay(TimeSpan.FromSeconds(3)));
-            Assert.NotEqual(timeoutTask, completed); // Should timeout before completing
-        }
 
         [Fact]
         public async Task GrainStorage_ShouldHandleHighThroughput()

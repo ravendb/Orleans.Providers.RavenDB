@@ -6,15 +6,20 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Embedded;
 using TestExtensions;
 using UnitTests;
+using UnitTests.Infrastructure;
 using UnitTests.RemindersTest;
 using Xunit;
+using Xunit.Abstractions;
 
 [TestCategory("Reminders")]
-public class RavenDbReminderTableTests : ReminderTableTestsBase
+public class RavenDbReminderTableTests : ReminderTableTestsBase, IClassFixture<RavenDbFixture>
 {
-    public RavenDbReminderTableTests(ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
+    private readonly RavenDbFixture ravenDbFixture;
+
+    public RavenDbReminderTableTests(ITestOutputHelper output, RavenDbFixture ravenDbFixture, ConnectionStringFixture fixture, TestEnvironmentFixture clusterFixture)
         : base(fixture, clusterFixture, new LoggerFilterOptions())
     {
+        this.ravenDbFixture = ravenDbFixture;
     }
 
     protected override Task<string> GetConnectionString()
@@ -22,23 +27,27 @@ public class RavenDbReminderTableTests : ReminderTableTestsBase
         return Task.FromResult(string.Empty);
     }
 
+    public override Task InitializeAsync()
+    {
+        Options.DatabaseName = ravenDbFixture.TestDatabaseName;
+        Options.Urls = [RavenDbFixture.ServerUrl.AbsoluteUri];
+        return base.InitializeAsync();
+    }
+
     protected override IReminderTable CreateRemindersTable()
     {
         // Start embedded RavenDB server
 
-        EmbeddedServer.Instance.StartServer();
-        var serverUrl = EmbeddedServer.Instance.GetServerUriAsync().GetAwaiter().GetResult().AbsoluteUri;
-
         // Set up RavenDB Reminder Table
-        var options = new RavenDbReminderOptions
+        Options = new RavenDbReminderOptions
         {
-            DatabaseName = "TestReminders",
-            Urls = [serverUrl],
             WaitForIndexesAfterSaveChanges = true
         };
 
-        return new RavenDbReminderTable(options, loggerFactory.CreateLogger<RavenDbReminderTable>());
+        return new RavenDbReminderTable(Options, loggerFactory.CreateLogger<RavenDbReminderTable>());
     }
+
+    public RavenDbReminderOptions Options { get; set; }
 
     [Fact]
     public async Task RavenDbReminderTable_TestRemindersRange()
@@ -56,15 +65,5 @@ public class RavenDbReminderTableTests : ReminderTableTestsBase
     public async Task RavenDbReminderTable_TestReminderSimple()
     {
         await ReminderSimple();
-    }
-
-    public override async Task DisposeAsync()
-    {
-        await base.DisposeAsync();
-
-        (await EmbeddedServer.Instance.GetDocumentStoreAsync("TestReminders"))
-            .Maintenance.Server.Send(new DeleteDatabasesOperation("TestReminders", hardDelete: true));
-
-        EmbeddedServer.Instance.Dispose();
     }
 }

@@ -14,16 +14,17 @@ namespace Orleans.Providers.RavenDB.Reminders
         private readonly RavenDbReminderOptions _options;
         private readonly ILogger<RavenDbReminderTable> _logger;
         private IDocumentStore _documentStore;
-
+        private Lazy<Task> _initDatabase;
         public RavenDbReminderTable(RavenDbReminderOptions options, ILogger<RavenDbReminderTable> logger)
         {
             _options = options;
             _logger = logger;
 
-            InitializeDocumentStore();
+
+            _initDatabase = new Lazy<Task>(InitializeDocumentStoreAsync);
         }
 
-        private void InitializeDocumentStore()
+        private async Task InitializeDocumentStoreAsync()
         {
             try
             {
@@ -36,15 +37,15 @@ namespace Orleans.Providers.RavenDB.Reminders
                 };
                 _documentStore.Initialize();
 
-                var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
+                var dbExists = await _documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
                 if (dbExists == false)
-                    _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                    await _documentStore.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
 
-                var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
+                var indexes = await _documentStore.Maintenance.SendAsync(new GetIndexNamesOperation(0, int.MaxValue));
                 if (indexes.Contains(nameof(ReminderDocumentsByHash)))
                     return;
 
-                new ReminderDocumentsByHash().Execute(_documentStore);
+                await new ReminderDocumentsByHash().ExecuteAsync(_documentStore);
             }
             catch (Exception e)
             {
@@ -53,8 +54,10 @@ namespace Orleans.Providers.RavenDB.Reminders
             }
         }
 
-        public Task Init() => Task.CompletedTask;
-        
+
+
+        public Task Init() => _initDatabase.Value;
+
         public async Task<ReminderTableData> ReadRows(GrainId grainId)
         {
             using var session = _documentStore.OpenAsyncSession();

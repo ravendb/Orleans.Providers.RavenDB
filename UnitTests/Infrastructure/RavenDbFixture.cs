@@ -9,16 +9,20 @@ namespace UnitTests.Infrastructure;
 public class RavenDbFixture : BaseTestClusterFixture
 {
     public IDocumentStore DocumentStore;
+    public string TestDatabaseName {get; private set; }
 
-    protected virtual string TestDatabaseName {get; set; }
+    static RavenDbFixture()
+    {
+        EmbeddedServer.Instance.StartServer();
+        ServerUrl = EmbeddedServer.Instance.GetServerUriAsync().Result;
+    }
 
+    public static Uri ServerUrl { get; }
 
     public override Task InitializeAsync()
     {
-        EmbeddedServer.Instance.StartServer();
-
+        TestDatabaseName = Guid.NewGuid().ToString();
         DocumentStore = EmbeddedServer.Instance.GetDocumentStore(TestDatabaseName);
-
         return base.InitializeAsync();
     }
 
@@ -28,9 +32,6 @@ public class RavenDbFixture : BaseTestClusterFixture
         {
             DocumentStore.Maintenance.Server.Send(new DeleteDatabasesOperation(TestDatabaseName, hardDelete: true));
             DocumentStore.Dispose();
-
-            EmbeddedServer.Instance.Dispose();
-
             return base.DisposeAsync();
         }
         catch

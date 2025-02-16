@@ -10,13 +10,10 @@ namespace UnitTests.Infrastructure;
 
 public class RavenDbReminderFixture : RavenDbFixture
 {
-    protected override string TestDatabaseName => DbName;
-
-    private const string DbName = "TestReminders";
-
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {
         builder.Options.InitialSilosCount = 1;
+        builder.Properties["Database"] = TestDatabaseName;
         builder.AddSiloBuilderConfigurator<SiloConfigurator>();
     }
 
@@ -35,7 +32,7 @@ public class RavenDbReminderFixture : RavenDbFixture
                     })
                     .AddRavenDbReminderTable(options =>
                     {
-                        options.DatabaseName = DbName;
+                        options.DatabaseName = hostBuilder.GetConfigurationValue("Database");
                         options.Urls = new[] { serverUrl };
                         options.WaitForIndexesAfterSaveChanges = true;
                     })
