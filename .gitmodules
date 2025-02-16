@@ -1,3 +1,6 @@
 [submodule "orleans"]
 	path = orleans
 	url = https://github.com/dotnet/orleans.git
+[submodule "libs/orleans"]
+	path = libs/orleans
+	url = https://github.com/dotnet/orleans

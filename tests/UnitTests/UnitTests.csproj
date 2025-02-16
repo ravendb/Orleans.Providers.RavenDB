@@ -27,7 +27,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\orleans\test\TesterInternal\TesterInternal.csproj" />
+	  <ProjectReference Include="..\..\libs\orleans\test\TesterInternal\TesterInternal.csproj" />
 	  <ProjectReference Include="..\..\src\Orleans.Providers.RavenDb\Orleans.Providers.RavenDb.csproj" />
 	</ItemGroup>
 
