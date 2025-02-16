@@ -13,17 +13,9 @@ public interface IOrderGrain : IGrainWithGuidKey
     Task<int> GetTotalPrice();
 
     Task ClearState();
+
+    Task OnBeforeWriteStateAsync(string script);
 }
 
-public interface ITestHook
-{
-    /// <summary>
-    /// A hook to be invoked before WriteStateAsync in the grain.
-    /// </summary>
-    Func<Task> OnBeforeWriteStateAsync { get; set; }
-}
-
-public class DefaultTestHook : ITestHook
-{
-    public Func<Task> OnBeforeWriteStateAsync { get; set; } = () => Task.CompletedTask;
-}
+public interface ILargeStateOrderGrain : IOrderGrain
+{}
