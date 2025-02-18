@@ -44,8 +44,8 @@ public class RavenDbMembershipTable : IMembershipTable
                 _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
 
             var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
-            if (indexes.Contains(nameof(MembershipByClusterId)) == false)
-                new MembershipByClusterId().Execute(_documentStore);
+            if (indexes.Contains(nameof(MembershipByClusterIdAndIamAlive)) == false)
+                new MembershipByClusterIdAndIamAlive().Execute(_documentStore);
 
             _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
         }
@@ -99,7 +99,7 @@ public class RavenDbMembershipTable : IMembershipTable
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
 
-        var documents = await session.Query<MembershipEntryDocument, MembershipByClusterId>()
+        var documents = await session.Query<MembershipEntryDocument, MembershipByClusterIdAndIamAlive>()
             .Where(doc => doc.ClusterId == _clusterId)
             .Include(x => x.ClusterId)
             .ToListAsync();
@@ -240,7 +240,7 @@ public class RavenDbMembershipTable : IMembershipTable
     public async Task DeleteMembershipTableEntries(string clusterId)
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var entriesToDelete = session.Query<MembershipEntryDocument>()
+        var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAndIamAlive>()
             .Where(e => e.ClusterId == clusterId)
             .ToListAsync();
 
@@ -257,7 +257,7 @@ public class RavenDbMembershipTable : IMembershipTable
     public async Task CleanupDefunctSiloEntries(DateTimeOffset cutoff)
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var defunctEntries = await session.Query<MembershipEntryDocument>()
+        var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAndIamAlive>()
             .Where(e => e.IAmAliveTime < cutoff.UtcDateTime)
             .Include(x => x.ClusterId)
             .ToListAsync();
@@ -312,14 +312,15 @@ public class RavenDbMembershipTable : IMembershipTable
         return $"Membership/{_clusterId}/{siloAddress.ToParsableString()}";
     }
 
-    private class MembershipByClusterId : AbstractIndexCreationTask<MembershipEntryDocument>
+    private class MembershipByClusterIdAndIamAlive : AbstractIndexCreationTask<MembershipEntryDocument>
     {
-        public MembershipByClusterId()
+        public MembershipByClusterIdAndIamAlive()
         {
             Map = documents => from membershipDoc in documents
                 select new
                 {
-                    membershipDoc.ClusterId
+                    membershipDoc.ClusterId,
+                    membershipDoc.IAmAliveTime
                 };
         }
     }
