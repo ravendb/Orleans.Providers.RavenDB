@@ -12,45 +12,23 @@ using UnitTests.MembershipTests;
 using Xunit;
 
 [TestCategory("Membership")]
-public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLifetime*/, IClassFixture<RavenDbFixture>
+public class RavenDbMembershipTableTests : MembershipTableTestsBase, IClassFixture<RavenDbFixture>
 {
     private static string MembershipTableTestsDatabase = "OrleansMembershipTableTests-" + Guid.NewGuid();
-    private readonly RavenDbFixture _fixture;
     private RavenDbMembershipTable _membershipTable;
 
     public RavenDbMembershipTableTests(ConnectionStringFixture fixture, RavenDbFixture ravenDbFixture, TestEnvironmentFixture clusterFixture)
         : base(fixture, clusterFixture, new LoggerFilterOptions())
     {
-        _fixture = ravenDbFixture;
     }
-
-    //public Task InitializeAsync()
-    //{
-    //    //MembershipOptions.DatabaseName = _fixture.TestDatabaseName;
-    //    //MembershipOptions.Urls = [RavenDbFixture.ServerUrl.AbsoluteUri];
-
-    //    return Task.CompletedTask;
-    //}
 
     protected override IGatewayListProvider CreateGatewayListProvider(ILogger logger)
     {
-        //var serverUrl = GetConnectionString().GetAwaiter().GetResult();
-
-        //var options = new RavenDbMembershipOptions
-        //{
-        //    Urls = new[] { serverUrl },
-        //    DatabaseName = MembershipTableTestsDatabase,
-        //    ClusterId = clusterId,
-        //    WaitForIndexesAfterSaveChanges = true
-        //};
-
         return new RavenDbGatewayListProvider(Options.Create(MembershipOptions), logger);
     }
 
     protected override IMembershipTable CreateMembershipTable(ILogger logger)
     {
-        //var serverUrl = GetConnectionString().GetAwaiter().GetResult();
-
         MembershipOptions = new RavenDbMembershipOptions
         {
             Urls = new[] { RavenDbFixture.ServerUrl.AbsoluteUri },
@@ -65,16 +43,11 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
 
     public RavenDbMembershipOptions MembershipOptions { get; set; }
 
-    protected override async Task<string> GetConnectionString()
+    protected override Task<string> GetConnectionString()
     {
-        return RavenDbFixture.ServerUrl.AbsoluteUri;
+        return Task.FromResult(RavenDbFixture.ServerUrl.AbsoluteUri);
     }
 
-    //private static readonly Lazy<Task<Uri>> _lazyServerUrl = new(() =>
-    //{
-    //    EmbeddedServer.Instance.StartServer();
-    //    return EmbeddedServer.Instance.GetServerUriAsync();
-    //});
 
     [Fact]
     public async Task Test_CleanupDefunctSiloEntries()
@@ -129,14 +102,4 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase/*, IAsyncLif
     {
         await MembershipTable_UpdateIAmAlive();
     }
-
-
-
-    //public async Task DisposeAsync()
-    //{
-    //    //await _membershipTable.DeleteMembershipTableEntries(clusterId);
-    //    _membershipTable = null;
-    //    Dispose();
-    //    //await _fixture.DocumentStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(MembershipTableTestsDatabase, hardDelete: true));
-    //}
 }

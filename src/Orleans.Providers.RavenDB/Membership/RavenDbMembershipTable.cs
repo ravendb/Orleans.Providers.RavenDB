@@ -1,12 +1,13 @@
 ﻿using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
-using Orleans.Providers.RavenDb.Membership;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
-using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+
+namespace Orleans.Providers.RavenDb.Membership;
 
 public class RavenDbMembershipTable : IMembershipTable
 {
@@ -22,7 +23,6 @@ public class RavenDbMembershipTable : IMembershipTable
         _logger = logger;
         _databaseName = options.DatabaseName;
         _clusterId = options.ClusterId ?? Guid.NewGuid().ToString();
-        //_documentStore = InitializeDocumentStore();
     }
 
     private void InitializeDocumentStore()
@@ -44,8 +44,8 @@ public class RavenDbMembershipTable : IMembershipTable
                 _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
 
             var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
-            if (indexes.Contains(nameof(MembershipByClusterIdAndIamAlive)) == false)
-                new MembershipByClusterIdAndIamAlive().Execute(_documentStore);
+            if (indexes.Contains(nameof(MembershipByClusterIdAliveTimeAndStatus)) == false)
+                new MembershipByClusterIdAliveTimeAndStatus().Execute(_documentStore);
 
             _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
         }
@@ -99,7 +99,7 @@ public class RavenDbMembershipTable : IMembershipTable
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
 
-        var documents = await session.Query<MembershipEntryDocument, MembershipByClusterIdAndIamAlive>()
+        var documents = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeAndStatus>()
             .Where(doc => doc.ClusterId == _clusterId)
             .Include(x => x.ClusterId)
             .ToListAsync();
@@ -240,7 +240,7 @@ public class RavenDbMembershipTable : IMembershipTable
     public async Task DeleteMembershipTableEntries(string clusterId)
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAndIamAlive>()
+        var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeAndStatus>()
             .Where(e => e.ClusterId == clusterId)
             .ToListAsync();
 
@@ -257,8 +257,8 @@ public class RavenDbMembershipTable : IMembershipTable
     public async Task CleanupDefunctSiloEntries(DateTimeOffset cutoff)
     {
         using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAndIamAlive>()
-            .Where(e => e.IAmAliveTime < cutoff.UtcDateTime)
+        var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeAndStatus>()
+            .Where(e => e.IAmAliveTime < cutoff.UtcDateTime && e.Status != SiloStatus.Active.ToString())
             .Include(x => x.ClusterId)
             .ToListAsync();
 
@@ -312,19 +312,17 @@ public class RavenDbMembershipTable : IMembershipTable
         return $"Membership/{_clusterId}/{siloAddress.ToParsableString()}";
     }
 
-    private class MembershipByClusterIdAndIamAlive : AbstractIndexCreationTask<MembershipEntryDocument>
+    private class MembershipByClusterIdAliveTimeAndStatus : AbstractIndexCreationTask<MembershipEntryDocument>
     {
-        public MembershipByClusterIdAndIamAlive()
+        public MembershipByClusterIdAliveTimeAndStatus()
         {
             Map = documents => from membershipDoc in documents
                 select new
                 {
                     membershipDoc.ClusterId,
-                    membershipDoc.IAmAliveTime
+                    membershipDoc.IAmAliveTime,
+                    membershipDoc.Status
                 };
         }
     }
 }
-
-
-
