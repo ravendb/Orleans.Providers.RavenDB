@@ -9,8 +9,6 @@ namespace UnitTests.Grains;
 [StorageProvider(ProviderName = "GrainStorageForTest")]
 public class OrderGrain : Grain<OrderState>, IOrderGrain
 {
-    //private readonly ITestHook _testHook;
-
     private readonly IDocumentStore _store;
 
     private string _script;
@@ -82,11 +80,6 @@ public class OrderGrain : Grain<OrderState>, IOrderGrain
             }
 
         }
-
-
-        //await OnBeforeWriteStateAsync(product);
-
-        //await _testHook.OnBeforeWriteStateAsync(); // Trigger the hook
 
         await WriteStateAsync();
     }

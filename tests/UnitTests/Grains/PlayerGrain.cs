@@ -55,7 +55,6 @@ public class PlayerGrain : Grain<PlayerState>, IPlayerGrain
     }
 }
 
-// [Serializable]
 public class PlayerState
 {
     public string Name { get; set; }

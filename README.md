@@ -82,9 +82,8 @@ or (on Linux/macOS)
 ```sh
 ./build.sh
 ```
+---
 
 ## 📖 Documentation Links
-Official Orleans Documentation: https://dotnet.github.io/orleans/
-RavenDB Documentation: https://ravendb.net/docs/
-Orleans GitHub Repository: https://github.com/dotnet/orleans
-RavenDB GitHub Repository: https://github.com/ravendb/ravendb
+- Official Orleans Documentation: https://dotnet.github.io/orleans/
+- RavenDB Documentation: https://ravendb.net/docs/

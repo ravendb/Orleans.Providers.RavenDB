@@ -9,11 +9,7 @@ namespace UnitTests.Infrastructure;
 
 public class RavenDbMembershipFixture : RavenDbFixture
 {
-    //public IDocumentStore DocumentStore;
-
     public const string ClusterId = "TestCluster"; 
-
-    //public const string TestDatabaseName = "TestMembership";
 
     protected override void ConfigureTestCluster(TestClusterBuilder builder)
     {

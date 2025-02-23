@@ -10,7 +10,6 @@ public class LargeStateOrderGrain : OrderGrain, ILargeStateOrderGrain
     {
     }
 
-
     public override async Task AddItem(Product product)
     {
         State.Items.Add(product);

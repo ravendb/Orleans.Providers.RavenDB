@@ -4,8 +4,6 @@ using Orleans.Configuration;
 using Orleans.Providers.RavenDb.Configuration;
 using Orleans.Storage;
 
-// ReSharper disable CheckNamespace
-// ReSharper disable InconsistentNaming
 namespace Orleans.Providers.RavenDb.StorageProviders;
 
 public static class RavenDbGrainStorageExtensions
@@ -31,9 +29,6 @@ public static class RavenDbGrainStorageExtensions
         services.AddTransient<IConfigurationValidator>(sp => new RavenDbGrainStorageOptionsValidator(sp.GetRequiredService<IOptionsMonitor<RavenDbOptions>>().Get(name), name));
         services.ConfigureNamedOptionForLogging<RavenDbOptions>(name);
         services.AddTransient<IPostConfigureOptions<RavenDbOptions>, RavenDbGrainStorageConfigurator>();
-
-        //return services.AddGrainStorage(name, RavenDbGrainStorageFactory.Create);
-
 
         services.AddKeyedSingleton(name, (sp, key) => RavenDbGrainStorageFactory.Create(sp, key as string));
         if (string.Equals(name, ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME, StringComparison.Ordinal))

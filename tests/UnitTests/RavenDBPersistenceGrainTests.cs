@@ -9,9 +9,7 @@ namespace UnitTests
     [TestCategory("Persistence")]
     public class RavenDbPersistenceGrainTests : OrleansTestingBase, IClassFixture<RavenDbStorageFixture>
     {
-        //public const string TestDatabaseName = "RavenDbPersistenceGrainTestDatabase";
         private readonly GrainPersistenceTestsRunner _runner;
-
 
         public RavenDbPersistenceGrainTests(ITestOutputHelper output, RavenDbStorageFixture fixture, string grainNamespace = "UnitTests.Grains")
         {
