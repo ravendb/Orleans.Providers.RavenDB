@@ -5,6 +5,9 @@ using Raven.Client.Documents;
 
 namespace Orleans.Providers.RavenDb.StorageProviders
 {
+    /// <summary>
+    /// Grain storage provider using RavenDB as the backend storage.
+    /// </summary>
     public class RavenDbGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloLifecycle>
     {
         private readonly RavenDbOptions _options;
@@ -19,8 +22,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
 
         public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
         {
-            _logger.LogDebug($"{nameof(RavenDbGrainStorage)}.{nameof(ReadStateAsync)} was called on grain {grainId}");
-
+            _logger.LogDebug("Reading state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
             try
             {
                 using var session = _documentStore.OpenAsyncSession();
@@ -40,55 +42,57 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{nameof(RavenDbGrainStorage)}.{nameof(ReadStateAsync)} failed for grainId={grainId}. Exception={ex.Message}");
-                throw;
+                _logger.LogError(ex, "Error reading state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
+                throw new OrleansException($"Failed to read state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}");
             }
         }
-
         public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
         {
-            _logger.LogDebug($"{nameof(RavenDbGrainStorage)}.{nameof(WriteStateAsync)} was called on grain {grainId}");
+            _logger.LogDebug("Writing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
 
             try
             {
                 using var session = _documentStore.OpenAsyncSession();
                 string key = GetKey<T>(stateName, grainId);
                 var etag = grainState.ETag;
-                await session.StoreAsync(grainState.State, changeVector: etag, id: key);
 
-                try
-                {
-                    await session.SaveChangesAsync();
-                }
-                catch (Raven.Client.Exceptions.ConcurrencyException ex)
-                {
-                    throw new OrleansException($"Optimistic concurrency violation, transaction aborted. Error message:{Environment.NewLine}{ex.Message}");
-                }
+                await session.StoreAsync(grainState.State, changeVector: etag, id: key);
+                await session.SaveChangesAsync();
+
+                grainState.ETag = session.Advanced.GetChangeVectorFor(grainState.State);
+                grainState.RecordExists = true;
+            }
+            catch (Raven.Client.Exceptions.ConcurrencyException ex)
+            {
+                _logger.LogWarning(ex, "Concurrency exception writing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
+                throw new OrleansException($"Concurrency exception writing state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{nameof(RavenDbGrainStorage)}.{nameof(WriteStateAsync)} failed for grainId={grainId}. Exception={ex.Message}");
-                throw;
+                _logger.LogError(ex, "Error writing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
+                throw new OrleansException($"Failed to write state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}");
             }
         }
 
         public async Task ClearStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
         {
-            _logger.LogDebug($"{nameof(RavenDbGrainStorage)}.{nameof(ClearStateAsync)} was called on grain {grainId}");
+            _logger.LogDebug("Clearing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
 
             try
             {
                 using var session = _documentStore.OpenAsyncSession();
                 string key = GetKey<T>(stateName, grainId);
-                session.Delete(key);
 
+                session.Delete(key);
                 await session.SaveChangesAsync();
+
                 grainState.RecordExists = false;
+                grainState.ETag = null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"{nameof(RavenDbGrainStorage)}.{nameof(ClearStateAsync)} failed for grainId={grainId}. Exception={ex.Message}");
-                throw;
+                _logger.LogError(ex, "Error clearing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
+                throw new OrleansException($"Failed to clear state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}");
             }
         }
 
@@ -97,11 +101,15 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             observer.Subscribe<RavenDbGrainStorage>(ServiceLifecycleStage.ApplicationServices, Init);
         }
 
+        /// <summary>
+        /// Initializes the RavenDB document store.
+        /// </summary>
+        /// <param name="ct">The cancellation token.</param>
         private Task Init(CancellationToken ct)
         {
             try
             {
-                _logger.LogInformation("Initializing RavenDbGrainStorage...");
+                _logger.LogInformation("Initializing RavenDB document store for database '{DatabaseName}' at URLs: {Urls}", _options.DatabaseName, string.Join(", ", _options.Urls));
 
                 _documentStore = new DocumentStore
                 {
@@ -115,15 +123,15 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error initializing RavenDbGrainStorage. Exception={ex.Message}");
-                throw;
+                _logger.LogError(ex, "Error initializing RavenDB document store.");
+                throw new OrleansException($"Failed to initialize RavenDB document store. Exception={Environment.NewLine}{ex.Message}");
             }
         }
 
         internal static string GetKey<T>(string grainType, GrainId grainId)
         {
-            var t = grainType != "state" ? grainType : typeof(T).Name;
-            return $"{t}/{grainId}";
+            var typeName = grainType != "state" ? grainType : typeof(T).Name;
+            return $"{typeName}/{grainId}";
         }
     }
 }

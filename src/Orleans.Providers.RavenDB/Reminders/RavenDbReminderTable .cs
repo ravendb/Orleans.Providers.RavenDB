@@ -8,12 +8,16 @@ using Raven.Client.ServerWide.Operations;
 
 namespace Orleans.Providers.RavenDb.Reminders
 {
+    /// <summary>
+    /// Represents the reminder table storage using RavenDB for Orleans reminders.
+    /// </summary>
     public class RavenDbReminderTable : IReminderTable
     {
         private readonly RavenDbReminderOptions _options;
         private readonly ILogger<RavenDbReminderTable> _logger;
         private IDocumentStore _documentStore;
-        private Lazy<Task> _initDatabase;
+        private readonly Lazy<Task> _initDatabase;
+
         public RavenDbReminderTable(RavenDbReminderOptions options, ILogger<RavenDbReminderTable> logger)
         {
             _options = options;
@@ -59,111 +63,157 @@ namespace Orleans.Providers.RavenDb.Reminders
 
         public async Task<ReminderTableData> ReadRows(GrainId grainId)
         {
-            using var session = _documentStore.OpenAsyncSession();
-            var reminders = await session.Advanced.LoadStartingWithAsync<RavenDbReminderDocument>($"reminders/{grainId}/");
-
-            var entries = reminders.Select(r => new ReminderEntry
+            _logger.LogDebug("Reading reminder rows for GrainId={GrainId}", grainId);
+            try
             {
-                GrainId = GrainId.Parse(r.GrainId),
-                ReminderName = r.ReminderName,
-                StartAt = r.StartAt,
-                Period = r.Period
-            }).ToList();
+                using var session = _documentStore.OpenAsyncSession();
+                var reminders = await session.Advanced.LoadStartingWithAsync<RavenDbReminderDocument>($"reminders/{grainId}/");
 
-            return new ReminderTableData(entries);
+                var entries = reminders.Select(r => new ReminderEntry
+                {
+                    GrainId = GrainId.Parse(r.GrainId),
+                    ReminderName = r.ReminderName,
+                    StartAt = r.StartAt,
+                    Period = r.Period
+                }).ToList();
+
+                return new ReminderTableData(entries);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error reading reminder rows for GrainId={GrainId}", grainId);
+                throw new OrleansException($"Failed to read rows for grain '{grainId}'", e);
+
+            }
         }
 
         public async Task<ReminderTableData> ReadRows(uint begin, uint end)
         {
-            using var session = _documentStore.OpenAsyncSession();
-
-            List<RavenDbReminderDocument>? reminders;
-            if (begin < end)
+            _logger.LogDebug("Reading reminder rows for Range {BeginHash} to {EndHash}", begin, end);
+            try
             {
-                reminders = await session.Query<RavenDbReminderDocument, ReminderDocumentsByHash>()
-                    .Where(doc => (long)doc.HashCode > begin && (long)doc.HashCode <= end)
-                    .ToListAsync();
+                using var session = _documentStore.OpenAsyncSession();
+
+                List<RavenDbReminderDocument>? reminders;
+                if (begin < end)
+                {
+                    reminders = await session.Query<RavenDbReminderDocument, ReminderDocumentsByHash>()
+                        .Where(doc => (long)doc.HashCode > begin && (long)doc.HashCode <= end)
+                        .ToListAsync();
+                }
+                else
+                {
+                    reminders = await session.Query<RavenDbReminderDocument, ReminderDocumentsByHash>()
+                        .Where(doc => (long)doc.HashCode > begin || (long)doc.HashCode <= end)
+                        .ToListAsync();
+                }
+
+                var entries = reminders.Select(r => new ReminderEntry
+                {
+                    GrainId = GrainId.Parse(r.GrainId),
+                    ReminderName = r.ReminderName,
+                    StartAt = r.StartAt,
+                    Period = r.Period,
+                    ETag = session.Advanced.GetChangeVectorFor(r)
+                }).ToList();
+
+                return new ReminderTableData(entries);
             }
-            else
+            catch (Exception e)
             {
-                reminders = await session.Query<RavenDbReminderDocument, ReminderDocumentsByHash>()
-                    .Where(doc => (long)doc.HashCode > begin || (long)doc.HashCode <= end)
-                    .ToListAsync();
+                _logger.LogError(e, "Error reading reminder rows for Range {BeginHash} to {EndHash}", begin, end);
+                throw new OrleansException($"Failed to read rows for Range [{begin},{end}]", e);
             }
 
-            var entries = reminders.Select(r => new ReminderEntry
-            {
-                GrainId = GrainId.Parse(r.GrainId),
-                ReminderName = r.ReminderName,
-                StartAt = r.StartAt,
-                Period = r.Period,
-                ETag = session.Advanced.GetChangeVectorFor(r)
-            }).ToList();
-
-            return new ReminderTableData(entries);
         }
 
         public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
         {
-            using var session = _documentStore.OpenAsyncSession();
-            var key = GetKey(grainId, reminderName);
-
-            var reminder = await session.LoadAsync<RavenDbReminderDocument>(key);
-            if (reminder == null)
-                return null;
-
-            var cv = session.Advanced.GetChangeVectorFor(reminder);
-
-            return new ReminderEntry
+            _logger.LogDebug("Reading single reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
+            try
             {
-                GrainId = grainId,
-                ReminderName = reminderName,
-                StartAt = reminder.StartAt,
-                Period = reminder.Period,
-                ETag = cv
-            };
+                using var session = _documentStore.OpenAsyncSession();
+                var key = GetKey(grainId, reminderName);
+
+                var reminder = await session.LoadAsync<RavenDbReminderDocument>(key);
+                if (reminder == null)
+                    return null;
+
+                var cv = session.Advanced.GetChangeVectorFor(reminder);
+
+                return new ReminderEntry
+                {
+                    GrainId = grainId,
+                    ReminderName = reminderName,
+                    StartAt = reminder.StartAt,
+                    Period = reminder.Period,
+                    ETag = cv
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error reading single reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
+                throw new OrleansException($"Failed to read reminder {reminderName} for grain {grainId}", ex);
+            }
         }
 
         public async Task<string> UpsertRow(ReminderEntry entry)
         {
-            using var session = _documentStore.OpenAsyncSession();
-            
-            if (_options.WaitForIndexesAfterSaveChanges)
-                session.Advanced.WaitForIndexesAfterSaveChanges();
-            
-            var key = GetKey(entry.GrainId, entry.ReminderName);
+            _logger.LogDebug("Upserting reminder row for GrainId={GrainId}, ReminderName={ReminderName}", entry.GrainId, entry.ReminderName);
+            try
+            {
+                using var session = _documentStore.OpenAsyncSession();
 
-            var reminder = await session.LoadAsync<RavenDbReminderDocument>(key) ?? new RavenDbReminderDocument();
-            reminder.GrainId = entry.GrainId.ToString();
-            reminder.ReminderName = entry.ReminderName;
-            reminder.StartAt = entry.StartAt;
-            reminder.Period = entry.Period;
-            reminder.LastUpdated = DateTime.UtcNow;
-            reminder.HashCode = entry.GrainId.GetUniformHashCode();
+                if (_options.WaitForIndexesAfterSaveChanges)
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
 
-            await session.StoreAsync(reminder, changeVector: entry.ETag, id: key);
-            await session.SaveChangesAsync();
+                var key = GetKey(entry.GrainId, entry.ReminderName);
 
-            return session.Advanced.GetChangeVectorFor(reminder);
+                var reminder = await session.LoadAsync<RavenDbReminderDocument>(key) ?? new RavenDbReminderDocument();
+                reminder.GrainId = entry.GrainId.ToString();
+                reminder.ReminderName = entry.ReminderName;
+                reminder.StartAt = entry.StartAt;
+                reminder.Period = entry.Period;
+                reminder.LastUpdated = DateTime.UtcNow;
+                reminder.HashCode = entry.GrainId.GetUniformHashCode();
+
+                await session.StoreAsync(reminder, changeVector: entry.ETag, id: key);
+                await session.SaveChangesAsync();
+
+                return session.Advanced.GetChangeVectorFor(reminder);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error upserting reminder row for GrainId={GrainId}, ReminderName={ReminderName}", entry.GrainId, entry.ReminderName);
+                throw new OrleansException($"Failed to upsert reminder {entry.ReminderName} for grain {entry.GrainId}", ex);
+            }
+
         }
 
         public async Task<bool> RemoveRow(GrainId grainId, string reminderName, string eTag)
         {
-            using var session = _documentStore.OpenAsyncSession();
-            var key = GetKey(grainId, reminderName);
+            _logger.LogDebug("Removing reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
 
-            var reminder = await session.LoadAsync<RavenDbReminderDocument>(key);
-            if (reminder == null) 
-                return false;
+            try
+            {
+                using var session = _documentStore.OpenAsyncSession();
+                var key = GetKey(grainId, reminderName);
 
-            if (session.Advanced.GetChangeVectorFor(reminder) != eTag)
-                return false; // ETag mismatch
-                //throw new InconsistentStateException($"ETag mismatch for {key}");
+                var reminder = await session.LoadAsync<RavenDbReminderDocument>(key);
+                if (reminder == null ||
+                    session.Advanced.GetChangeVectorFor(reminder) != eTag) // ETag mismatch
+                    return false;
 
-            session.Delete(reminder);
-            await session.SaveChangesAsync();
+                session.Delete(reminder);
+                await session.SaveChangesAsync();
 
-            return true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
+                throw new OrleansException($"Failed to remove reminder {reminderName} for grain {grainId}", ex);
+            }
         }
 
         public async Task TestOnlyClearTable()
@@ -181,7 +231,7 @@ namespace Orleans.Providers.RavenDb.Reminders
             return $"reminders/{grainId}/{reminderName}";
         }
 
-        private class ReminderDocumentsByHash : AbstractIndexCreationTask<RavenDbReminderDocument/*, ReminderDocumentsByHash.Result*/>
+        private class ReminderDocumentsByHash : AbstractIndexCreationTask<RavenDbReminderDocument>
         {
             public ReminderDocumentsByHash()
             {

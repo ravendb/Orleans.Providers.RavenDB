@@ -9,6 +9,9 @@ using SiloAddressClass = Orleans.Runtime.SiloAddress;
 
 namespace Orleans.Providers.RavenDb.Membership;
 
+/// <summary>
+/// Gateway list provider that retrieves active gateways from RavenDB for Orleans clients.
+/// </summary>
 public class RavenDbGatewayListProvider : IGatewayListProvider
 {
     private readonly RavenDbMembershipOptions _options;
@@ -27,27 +30,48 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
 
     public Task InitializeGatewayListProvider()
     {
-        _documentStore = new DocumentStore
+        try
         {
-            Urls = _options.Urls,
-            Database = _options.DatabaseName
-        }.Initialize();
+            _documentStore = new DocumentStore
+            {
+                Urls = _options.Urls,
+                Database = _options.DatabaseName
+            }.Initialize();
 
-        _logger.LogInformation("Initializing RavenDB Gateway List Provider");
+            _logger.LogInformation("Initializing RavenDB Gateway List Provider for ClusterId='{ClusterId}'", _options.ClusterId);
 
-        return Task.CompletedTask;
+            return Task.CompletedTask;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to initialize RavenDB Gateway List Provider.");
+            throw;
+        }
+
     }
 
     public async Task<IList<Uri>> GetGateways()
     {
-        using var session = _documentStore.OpenAsyncSession(_options.DatabaseName);
-        var gateways = await session.Query<MembershipEntryDocument>()
-            .Where(entry => entry.ClusterId == _options.ClusterId && entry.Status == SiloStatus.Active.ToString() && entry.ProxyPort > 0)
-            .ToListAsync();
+        _logger.LogDebug("Retrieving active gateways from RavenDB for ClusterId='{ClusterId}'", _options.ClusterId);
 
-        _logger.LogInformation("Retrieved {Count} active gateways from RavenDB", gateways.Count);
+        try
+        {
 
-        return gateways.Select(ToGatewayUri).ToList();
+            using var session = _documentStore.OpenAsyncSession(_options.DatabaseName);
+            var gateways = await session.Query<MembershipEntryDocument, RavenDbMembershipTable.MembershipByClusterIdAliveTimeStatusAndPort>()
+                .Where(entry => entry.ClusterId == _options.ClusterId && entry.Status == SiloStatus.Active.ToString() && entry.ProxyPort > 0)
+                .ToListAsync();
+
+            _logger.LogInformation("Retrieved {Count} active gateways from RavenDB", gateways.Count);
+
+            return gateways.Select(ToGatewayUri).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving active gateways from RavenDB for ClusterId='{ClusterId}'", _options.ClusterId);
+            throw;
+        }
+
     }
 
     private static Uri ToGatewayUri(MembershipEntryDocument membershipDocument)

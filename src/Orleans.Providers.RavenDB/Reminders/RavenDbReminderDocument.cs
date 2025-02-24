@@ -1,13 +1,16 @@
 ﻿namespace Orleans.Providers.RavenDb.Reminders
 {
+    /// <summary>
+    /// Represents a reminder document stored in RavenDB for Orleans reminders.
+    /// </summary>
     public class RavenDbReminderDocument
     {
-        public string Id { get; set; }               // Unique key, e.g., "<GrainId>_<ReminderName>"
-        public string GrainId { get; set; }           // Grain ID
-        public string ReminderName { get; set; }      // Reminder Name
-        public DateTime StartAt { get; set; }         // Initial due time for the reminder
-        public TimeSpan Period { get; set; }          // Interval at which the reminder should fire
-        public DateTime LastUpdated { get; set; }     // Last time the reminder was updated
+        public string Id { get; set; }    
+        public string GrainId { get; set; } 
+        public string ReminderName { get; set; }
+        public DateTime StartAt { get; set; }
+        public TimeSpan Period { get; set; }
+        public DateTime LastUpdated { get; set; }
         public uint HashCode { get; set; }
         
     }

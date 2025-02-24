@@ -6,6 +6,9 @@ using Orleans.Storage;
 
 namespace Orleans.Providers.RavenDb.StorageProviders;
 
+/// <summary>
+/// Extension methods for configuring RavenDB grain storage in Orleans.
+/// </summary>
 public static class RavenDbGrainStorageExtensions
 {
     public static ISiloBuilder AddRavenDbGrainStorage(this ISiloBuilder builder, string name, Action<RavenDbOptions> configureOptions)

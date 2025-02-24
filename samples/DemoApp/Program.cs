@@ -26,24 +26,18 @@ public class Program
         }.Initialize();
 
         var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-        if (dbRec != null)
-        {
-            await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true));
-            await Task.Delay(5000);
+        if (dbRec == null)
+            return;
 
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
+        // delete and re-create the database
+        await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true));
+        await Task.Delay(5000);
 
-        }
+        await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
     }
 
     public static async Task Main(string[] args)
     {
-        //var grainAssembly = typeof(PlayerGrain).Assembly;
-        //Console.WriteLine($"Loading grains from: {grainAssembly.FullName}");
-
-        //var grainAssembly2 = typeof(IGamePlayerGrain).Assembly;
-        //Console.WriteLine($"Also, Loading grains from: {grainAssembly2.FullName}");
-
         await DeleteOldDataIfNeeded();
 
         using var cts = new CancellationTokenSource();
@@ -171,7 +165,6 @@ public class Program
 
             await Task.Delay(10);
         }
-
 
         // wait for reminder
         var sw = Stopwatch.StartNew();

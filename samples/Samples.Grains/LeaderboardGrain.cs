@@ -5,26 +5,30 @@ namespace Samples.Grains;
 public class LeaderboardGrain : Grain, ILeaderboardGrain, IRemindable
 {
     private List<PlayerScore> _topPlayers = new();
-    private IGrainReminder _reminder;
+    private bool _boardUpdated = false;
 
-    public override async Task OnActivateAsync(CancellationToken cancellationToken)
+
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _reminder = await this.RegisterOrUpdateReminder("UpdateLeaderboard", TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
+        return this.RegisterOrUpdateReminder("UpdateLeaderboard", TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
     }
 
     public Task<List<PlayerScore>> GetTopPlayers() => Task.FromResult(_topPlayers);
+
     public Task<bool> IsBoardUpdated()
     {
-        throw new NotImplementedException();
+        return Task.FromResult(_boardUpdated);
     }
 
     public async Task ReceiveReminder(string reminderName, TickStatus status)
     {
         var players = await Task.WhenAll(
-            Enumerable.Range(1, 10)
-                .Select(id => GrainFactory.GetGrain<IGamePlayerGrain>(0).GetScore())
+            Enumerable.Range(1, 20)
+                .Select(id => GrainFactory.GetGrain<IGamePlayerGrain>(id).GetScore())
         );
 
-        _topPlayers = players.Select((score, index) => new PlayerScore($"Player {index + 1}", score)).OrderByDescending(p => p.Score).ToList();
+        _topPlayers = players.Select((score, index) => new PlayerScore($"Player {index + 1}", score)).OrderByDescending(p => p.Score).Take(10).ToList();
+
+        _boardUpdated = true;
     }
 }

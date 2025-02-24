@@ -3,12 +3,10 @@
     public sealed class RavenDbReminderOptionsValidator : IConfigurationValidator
     {
         private readonly RavenDbReminderOptions _options;
-        private readonly string _name;
 
         public RavenDbReminderOptionsValidator(RavenDbReminderOptions options)
         {
             _options = options;
-            //_name = name;
         }
 
         public void ValidateConfiguration()

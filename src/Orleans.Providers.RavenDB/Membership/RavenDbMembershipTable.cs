@@ -9,6 +9,9 @@ using Raven.Client.ServerWide.Operations;
 
 namespace Orleans.Providers.RavenDb.Membership;
 
+/// <summary>
+/// Implements the Orleans IMembershipTable interface using RavenDB as the storage provider.
+/// </summary>
 public class RavenDbMembershipTable : IMembershipTable
 {
     private IDocumentStore _documentStore;
@@ -44,234 +47,301 @@ public class RavenDbMembershipTable : IMembershipTable
                 _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
 
             var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
-            if (indexes.Contains(nameof(MembershipByClusterIdAliveTimeAndStatus)) == false)
-                new MembershipByClusterIdAliveTimeAndStatus().Execute(_documentStore);
+            if (indexes.Contains(nameof(MembershipByClusterIdAliveTimeStatusAndPort)) == false)
+                new MembershipByClusterIdAliveTimeStatusAndPort().Execute(_documentStore);
 
             _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to initialize RavenDB DocumentStore.");
+            _logger.LogError(ex, $"Failed to initialize RavenDB DocumentStore. Exception={ex}");
             throw;
         }
     }
 
     public async Task InitializeMembershipTable(bool tryInitTable)
     {
-        _logger.LogInformation("Initializing RavenDB Membership Table");
-        InitializeDocumentStore();
-
-        if (tryInitTable)
+        _logger.LogInformation("Initializing RavenDB Membership Table for ClusterId={ClusterId}", _options.ClusterId);
+        try
         {
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
-            // Check for existing entries or ensure the database exists
-            var count = await session.Query<MembershipEntryDocument>().CountAsync();
-            _logger.LogInformation($"Existing membership entries: {count}");
+            InitializeDocumentStore();
+
+            if (tryInitTable)
+            {
+                using var session = _documentStore.OpenAsyncSession(_databaseName);
+                // Check for existing entries or ensure the database exists
+                var count = await session.Query<MembershipEntryDocument>().CountAsync();
+                _logger.LogInformation($"Existing membership entries: {count}");
+            }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing RavenDB Membership Table for ClusterId={ClusterId}", _options.ClusterId);
+            throw new OrleansException($"Failed to initialize RavenDB Membership Table for ClusterId={_options.ClusterId}. Exception={ex}");
+        }
+
     }
 
     public async Task<MembershipTableData> ReadRow(SiloAddress key)
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var docId = GetDocumentId(key);
-        var document = await session.LoadAsync<MembershipEntryDocument>(docId, 
-            builder => builder.IncludeDocuments<TableVersionDocument>(x => x.ClusterId));
+        _logger.LogDebug("Reading membership entry for SiloAddress={SiloAddress}", key);
 
-        // Load the TableVersion separately
-        var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
-        var tableVersion = versionDoc != null
-            ? new TableVersion(versionDoc.Version, session.Advanced.GetChangeVectorFor(versionDoc))
-            : new TableVersion(0, "0"); // Default version if no version document exists
-
-        if (document == null)
+        try
         {
-            return new MembershipTableData([], tableVersion);
-        }
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var docId = GetDocumentId(key);
+            var document = await session.LoadAsync<MembershipEntryDocument>(docId,
+                builder => builder.IncludeDocuments<TableVersionDocument>(x => x.ClusterId));
 
-        var entry = ToMembershipEntry(document);
-        return new MembershipTableData(
-            [Tuple.Create(entry, session.Advanced.GetChangeVectorFor(document))],
-            tableVersion
-        );
+            // Load the TableVersion separately
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
+            var tableVersion = versionDoc != null
+                ? new TableVersion(versionDoc.Version, session.Advanced.GetChangeVectorFor(versionDoc))
+                : new TableVersion(0, "0"); // Default version if no version document exists
+
+            if (document == null)
+                return new MembershipTableData([], tableVersion);
+            
+            var entry = ToMembershipEntry(document);
+            return new MembershipTableData(
+                [Tuple.Create(entry, session.Advanced.GetChangeVectorFor(document))],
+                tableVersion
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reading membership entry for SiloAddress={SiloAddress}", key);
+            throw new OrleansException($"Failed to read membership entry for SiloAddress={key}. Exception={ex}");
+        }
     }
 
     public async Task<MembershipTableData> ReadAll()
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
+        _logger.LogDebug("Reading all membership entries for ClusterId={ClusterId}", _options.ClusterId);
 
-        var documents = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeAndStatus>()
-            .Where(doc => doc.ClusterId == _clusterId)
-            .Include(x => x.ClusterId)
-            .ToListAsync();
+        try
+        {
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
 
-        var entriesWithETags = documents
-            .Select(doc => Tuple.Create(ToMembershipEntry(doc), session.Advanced.GetChangeVectorFor(doc)))
-            .ToList();
+            var documents = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
+                .Where(doc => doc.ClusterId == _clusterId)
+                .Include(x => x.ClusterId)
+                .ToListAsync();
 
-        // Load the global table version
-        var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
-        var tableVersion = versionDoc != null
-            ? new TableVersion(versionDoc.Version, session.Advanced.GetChangeVectorFor(versionDoc))
-            : new TableVersion(0, "0"); // Default if no version doc exists
+            var entriesWithETags = documents
+                .Select(doc => Tuple.Create(ToMembershipEntry(doc), session.Advanced.GetChangeVectorFor(doc)))
+                .ToList();
 
-        return new MembershipTableData(entriesWithETags, tableVersion);
+            // Load the global table version
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
+            var tableVersion = versionDoc != null
+                ? new TableVersion(versionDoc.Version, session.Advanced.GetChangeVectorFor(versionDoc))
+                : new TableVersion(0, "0"); // Default if no version doc exists
+
+            return new MembershipTableData(entriesWithETags, tableVersion);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reading all membership entries for ClusterId={ClusterId}", _options.ClusterId);
+            throw new OrleansException($"Failed to read membership entries for ClusterId={_options.ClusterId}. Exception={ex}");
+        }
     }
-
 
     public async Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion)
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
+        _logger.LogDebug("Inserting membership entry for SiloAddress={SiloAddress}", entry.SiloAddress);
 
-        // Load the current TableVersion from RavenDB
-        var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
-        if (versionDoc == null)
+        try
         {
-            versionDoc = new TableVersionDocument
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+
+            // Load the current TableVersion from RavenDB
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId) ?? new TableVersionDocument
             {
                 DeploymentId = _clusterId,
                 Version = 0
             };
-        }
 
-        // Ensure the provided TableVersion is greater than the stored version
-        if (tableVersion.Version <= versionDoc.Version)
+            // Ensure the provided TableVersion is greater than the stored version
+            if (tableVersion.Version <= versionDoc.Version)
+            {
+                _logger.LogWarning("InsertRow failed due to outdated version. Provided={Provided}, Current={Current}",
+                    tableVersion.Version, versionDoc.Version);
+                return false; // Reject insert if version is outdated
+            }
+
+            var docId = GetDocumentId(entry.SiloAddress);
+
+            // Check for duplicate silo entry
+            var exists = await session.Advanced.ExistsAsync(docId);
+            if (exists)
+            {
+                _logger.LogWarning("InsertRow failed: Duplicate entry for SiloAddress {SiloAddress}", entry.SiloAddress);
+                return false;
+            }
+
+            session.Advanced.UseOptimisticConcurrency = true;
+            if (_options.WaitForIndexesAfterSaveChanges)
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+
+            // Insert the new membership entry
+            var document = ToDocument(entry);
+            document.ClusterId = _clusterId;
+            await session.StoreAsync(document, docId);
+
+            // Update the TableVersion
+            versionDoc.Version = tableVersion.Version;
+            await session.StoreAsync(versionDoc, versionDoc.DeploymentId);
+
+            await session.SaveChangesAsync();
+
+            return true;
+        }
+        catch (Exception ex)
         {
-            _logger.LogWarning("InsertRow failed due to outdated version. Provided={Provided}, Current={Current}",
-                tableVersion.Version, versionDoc.Version);
-            return false; // Reject insert if version is outdated
+            _logger.LogError(ex, "Error inserting membership entry for SiloAddress={SiloAddress}", entry.SiloAddress);
+            throw new OrleansException($"Failed to insert membership entry for SiloAddress={entry.SiloAddress}. Exception={ex}");
         }
 
-        var docId = GetDocumentId(entry.SiloAddress);
-
-        // Check for duplicate silo entry
-        var exists = await session.Advanced.ExistsAsync(docId);
-        if (exists)
-        {
-            _logger.LogWarning("InsertRow failed: Duplicate entry for SiloAddress {SiloAddress}", entry.SiloAddress);
-            return false;
-        }
-
-        session.Advanced.UseOptimisticConcurrency = true;
-        if (_options.WaitForIndexesAfterSaveChanges)
-            session.Advanced.WaitForIndexesAfterSaveChanges();
-
-        // Insert the new membership entry
-        var document = ToDocument(entry);
-        document.ClusterId = _clusterId;
-        await session.StoreAsync(document, docId);
-
-        // Update the TableVersion
-        versionDoc.Version = tableVersion.Version;
-        await session.StoreAsync(versionDoc, versionDoc.DeploymentId);
-
-        await session.SaveChangesAsync();
-
-        return true;
     }
-
 
     public async Task<bool> UpdateRow(MembershipEntry entry, string etag, TableVersion tableVersion)
     {
-        var documentId = GetDocumentId(entry.SiloAddress);
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var document = await session.LoadAsync<MembershipEntryDocument>(documentId, builder => builder.IncludeDocuments(x => x.ClusterId));
+        _logger.LogDebug("Updating membership entry for SiloAddress={SiloAddress}", entry.SiloAddress);
 
-        if (document == null || session.Advanced.GetChangeVectorFor(document) != etag)
-            return false; // Document doesn't exist or ETag mismatch
-
-        // Load the global TableVersion
-        var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
-        if (versionDoc == null)
+        try
         {
-            return false; // Should never happen, but handle gracefully
+            var documentId = GetDocumentId(entry.SiloAddress);
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var document = await session.LoadAsync<MembershipEntryDocument>(documentId, builder => builder.IncludeDocuments(x => x.ClusterId));
+
+            if (document == null || session.Advanced.GetChangeVectorFor(document) != etag)
+                return false; // Document doesn't exist or ETag mismatch
+
+            // Load the global TableVersion
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
+
+            // Ensure the provided TableVersion is greater than the stored version
+            if (versionDoc == null || tableVersion.Version <= versionDoc.Version)
+            {
+                _logger.LogWarning("UpdateRow failed: outdated table version. Provided={Provided}, Current={Current}",
+                    tableVersion.Version, versionDoc?.Version);
+                return false;
+            }
+
+            session.Advanced.UseOptimisticConcurrency = true;
+            if (_options.WaitForIndexesAfterSaveChanges)
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+
+            // Update entry
+            UpdateDocument();
+
+            // Update global table version
+            versionDoc.Version = tableVersion.Version;
+
+            await session.SaveChangesAsync();
+
+            return true;
+
+            void UpdateDocument()
+            {
+                document.SiloName = entry.SiloName;
+                document.SiloAddress = entry.SiloAddress.ToParsableString();
+                document.HostName = entry.HostName;
+                document.Status = entry.Status.ToString();
+                document.ProxyPort = entry.ProxyPort;
+                document.StartTime = entry.StartTime.ToUniversalTime();
+                document.IAmAliveTime = entry.IAmAliveTime.ToUniversalTime();
+                document.RoleName = entry.RoleName;
+            }
         }
-
-        // Ensure the provided TableVersion is greater than the stored version
-        if (tableVersion.Version <= versionDoc.Version)
+        catch (Exception ex)
         {
-            _logger.LogWarning("UpdateRow failed: outdated table version. Provided={Provided}, Current={Current}",
-                tableVersion.Version, versionDoc.Version);
-            return false;
-        }
-
-        session.Advanced.UseOptimisticConcurrency = true;
-        if (_options.WaitForIndexesAfterSaveChanges)
-            session.Advanced.WaitForIndexesAfterSaveChanges();
-
-        // Update entry
-        UpdateDocument();
-
-        // Update global table version
-        versionDoc.Version = tableVersion.Version;
-
-        await session.SaveChangesAsync();
-
-        return true;
-
-        void UpdateDocument()
-        {
-            document.SiloName = entry.SiloName;
-            document.SiloAddress = entry.SiloAddress.ToParsableString();
-            document.HostName = entry.HostName;
-            document.Status = entry.Status.ToString();
-            document.ProxyPort = entry.ProxyPort;
-            document.StartTime = entry.StartTime.ToUniversalTime();
-            document.IAmAliveTime = entry.IAmAliveTime.ToUniversalTime();
-            document.RoleName = entry.RoleName;
+            _logger.LogError(ex, "Error updating membership entry for SiloAddress={SiloAddress}", entry.SiloAddress);
+            throw new OrleansException($"Failed to update membership entry for SiloAddress={entry.SiloAddress}. Exception={ex}");
         }
     }
 
     public async Task UpdateIAmAlive(MembershipEntry entry)
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var documentId = GetDocumentId(entry.SiloAddress); // Convert SiloAddress to string
-        var document = await session.LoadAsync<MembershipEntryDocument>(documentId);
+        _logger.LogDebug("Updating IAmAliveTime for SiloAddress={SiloAddress}", entry.SiloAddress);
 
-        if (document == null)
-            return;
-        
-        document.IAmAliveTime = entry.IAmAliveTime.ToUniversalTime();
-        if (_options.WaitForIndexesAfterSaveChanges)
-            session.Advanced.WaitForIndexesAfterSaveChanges();
+        try
+        {
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var documentId = GetDocumentId(entry.SiloAddress); // Convert SiloAddress to string
+            var document = await session.LoadAsync<MembershipEntryDocument>(documentId);
 
-        await session.SaveChangesAsync();
+            if (document == null)
+                return;
+
+            document.IAmAliveTime = entry.IAmAliveTime.ToUniversalTime();
+            if (_options.WaitForIndexesAfterSaveChanges)
+                session.Advanced.WaitForIndexesAfterSaveChanges();
+
+            await session.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating IAmAliveTime for SiloAddress={SiloAddress}", entry.SiloAddress);
+            throw new OrleansException($"Failed to update IAmAliveTime for SiloAddress={entry.SiloAddress}. Exception={ex}");
+        }
+
     }
 
     public async Task DeleteMembershipTableEntries(string clusterId)
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeAndStatus>()
-            .Where(e => e.ClusterId == clusterId)
-            .ToListAsync();
+        _logger.LogDebug("Deleting membership table entries for ClusterId={ClusterId}", clusterId);
 
-        foreach (var entry in entriesToDelete.Result)
+        try
         {
-            session.Delete(entry);
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
+                .Where(e => e.ClusterId == clusterId)
+                .ToListAsync();
+
+            foreach (var entry in entriesToDelete.Result)
+            {
+                session.Delete(entry);
+            }
+
+            session.Delete(clusterId);
+            await session.SaveChangesAsync();
         }
-
-        session.Delete(clusterId);
-
-        await session.SaveChangesAsync();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting membership table entries for ClusterId={ClusterId}", clusterId);
+            throw new OrleansException($"Failed to delete membership table entries for ClusterId={clusterId}. Exception={ex}");
+        }
     }
 
     public async Task CleanupDefunctSiloEntries(DateTimeOffset cutoff)
     {
-        using var session = _documentStore.OpenAsyncSession(_databaseName);
-        var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeAndStatus>()
-            .Where(e => e.IAmAliveTime < cutoff.UtcDateTime && e.Status != SiloStatus.Active.ToString())
-            .Include(x => x.ClusterId)
-            .ToListAsync();
+        _logger.LogDebug("Cleaning up defunct silo entries before cutoff={Cutoff}", cutoff);
 
-        foreach (var entry in defunctEntries)
+        try
         {
-            session.Delete(entry);
+            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
+                .Where(e => e.IAmAliveTime < cutoff.UtcDateTime && e.Status != SiloStatus.Active.ToString())
+                .Include(x => x.ClusterId)
+                .ToListAsync();
+
+            foreach (var entry in defunctEntries)
+            {
+                session.Delete(entry);
+            }
+
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
+            versionDoc.Version += 1;
+
+            await session.SaveChangesAsync();
         }
-
-        var versionDoc = await session.LoadAsync<TableVersionDocument>(_clusterId);
-        versionDoc.Version += 1;
-
-
-        await session.SaveChangesAsync();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cleaning up defunct silo entries before cutoff={Cutoff}", cutoff);
+            throw new OrleansException($"Failed to clean up defunct silo entries before cutoff={cutoff}. Exception={ex}");
+        }
     }
 
     private MembershipEntry ToMembershipEntry(MembershipEntryDocument document)
@@ -307,21 +377,19 @@ public class RavenDbMembershipTable : IMembershipTable
         };
     }
 
-    private string GetDocumentId(SiloAddress siloAddress)
-    {
-        return $"Membership/{_clusterId}/{siloAddress.ToParsableString()}";
-    }
+    private string GetDocumentId(SiloAddress siloAddress) => $"Membership/{_clusterId}/{siloAddress.ToParsableString()}";
 
-    private class MembershipByClusterIdAliveTimeAndStatus : AbstractIndexCreationTask<MembershipEntryDocument>
+    internal class MembershipByClusterIdAliveTimeStatusAndPort : AbstractIndexCreationTask<MembershipEntryDocument>
     {
-        public MembershipByClusterIdAliveTimeAndStatus()
+        public MembershipByClusterIdAliveTimeStatusAndPort()
         {
             Map = documents => from membershipDoc in documents
                 select new
                 {
                     membershipDoc.ClusterId,
                     membershipDoc.IAmAliveTime,
-                    membershipDoc.Status
+                    membershipDoc.Status,
+                    membershipDoc.ProxyPort
                 };
         }
     }

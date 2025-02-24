@@ -25,40 +25,47 @@ This provider enables **high-performance, distributed applications** that levera
 ## 🔧 Configuration
 
 ```csharp
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Orleans;
-using Orleans.Hosting;
-using Orleans.Providers.RavenDb;
 
-// TODO : check this code!
+var host = Host.CreateDefaultBuilder(args)
+	.UseOrleans(siloBuilder =>
+	{
+		// Define RavenDB connection settings
+		string serverUrl = "http://localhost:8080";
+		string databaseName = "OrleansDemo";
 
-var host = Host.CreateDefaultBuilder()
-    .UseOrleans(siloBuilder =>
-    {
-        siloBuilder.UseRavenDbClustering(options =>
-        {
-            options.DatabaseUrl = "http://localhost:8080";
-            options.DatabaseName = "OrleansCluster";
-        });
-
-        siloBuilder.AddRavenDbGrainStorage("GrainStore", options =>
-        {
-            options.DatabaseUrl = "http://localhost:8080";
-            options.DatabaseName = "OrleansData";
-        });
-
-        siloBuilder.UseRavenDbReminderService(options =>
-        {
-            options.DatabaseUrl = "http://localhost:8080";
-            options.DatabaseName = "OrleansReminders";
-        });
-    })
-    .ConfigureServices(services =>
-    {
-        services.AddLogging();
-    })
-    .Build();
+		siloBuilder
+			// Configure clustering with RavenDB
+			.UseRavenDbMembershipTable(options =>
+			{
+				options.Urls = new[] { serverUrl };
+				options.DatabaseName = databaseName;
+			})
+			// Configure grain storage with RavenDB
+			.AddRavenDbGrainStorage("RavenGrainStorage", options =>
+			{
+				options.Urls = new[] { serverUrl };
+				options.DatabaseName = databaseName;
+			})
+			// Configure reminders with RavenDB
+			.AddRavenDbReminderTable(options =>
+			{
+				options.Urls = new[] { serverUrl };
+				options.DatabaseName = databaseName;
+			})
+			// Configure other Orleans settings
+			.Configure<ClusterOptions>(options =>
+			{
+				options.ClusterId = "dev";
+				options.ServiceId = "OrleansDemo";
+			})
+			.Configure<EndpointOptions>(options =>
+			{
+				options.AdvertisedIPAddress = IPAddress.Loopback;
+				options.SiloPort = 11111;
+				options.GatewayPort = 30000;
+			})
+			.ConfigureLogging(logging => logging.AddConsole());
+	}).Build();
 
 await host.RunAsync();
 ```
