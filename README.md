@@ -18,7 +18,7 @@ This provider enables **high-performance, distributed applications** that levera
 ✔ **Clustering Support** – Uses RavenDB for **Orleans cluster membership management**.  
 ✔ **Optimized Queries** – Efficient indexing and querying using **RavenDB’s built-in indexing**.  
 ✔ **Fully Asynchronous** – Non-blocking, highly scalable storage provider.  
-✔ **.NET 9 Support** – Fully compatible with the latest Orleans & .NET 9.  
+✔ **.NET 8 Support** – Fully compatible with the latest Orleans & .NET 8.  
 
 ---
 
