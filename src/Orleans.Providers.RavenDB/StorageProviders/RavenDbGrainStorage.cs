@@ -1,7 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
+using Orleans.Serialization;
 using Orleans.Storage;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace Orleans.Providers.RavenDb.StorageProviders
 {
@@ -10,14 +14,39 @@ namespace Orleans.Providers.RavenDb.StorageProviders
     /// </summary>
     public class RavenDbGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloLifecycle>
     {
-        private readonly RavenDbOptions _options;
+        private readonly RavenDbGrainStorageOptions _options;
         private readonly ILogger<RavenDbGrainStorage> _logger;
         private IDocumentStore _documentStore;
+        private readonly TransactionMode _transactionMode;
 
-        public RavenDbGrainStorage(RavenDbOptions options, ILogger<RavenDbGrainStorage> logger)
+        public RavenDbGrainStorage(IServiceProvider services, RavenDbGrainStorageOptions options, ILogger<RavenDbGrainStorage> logger)
         {
             _options = options;
             _logger = logger;
+            _transactionMode = _options.UseClusterWideTransactions
+                ? TransactionMode.ClusterWide
+                : TransactionMode.SingleNode;
+
+            AddOrleansJsonConvertors(services);
+        }
+
+        private void AddOrleansJsonConvertors(IServiceProvider services)
+        {
+            var settings = OrleansJsonSerializerSettings.GetDefaultSerializerSettings(services);
+
+            _options.Conventions ??= new DocumentConventions
+            {
+                Serialization = new NewtonsoftJsonSerializationConventions()
+            };
+
+            ((NewtonsoftJsonSerializationConventions)_options.Conventions.Serialization).CustomizeJsonSerializer +=
+                serializer =>
+                {
+                    foreach (var converter in settings.Converters)
+                    {
+                        serializer.Converters.Add(converter);
+                    }
+                };
         }
 
         public async Task ReadStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
@@ -25,9 +54,13 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             _logger.LogDebug("Reading state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
-                string key = GetKey<T>(stateName, grainId);
+                using var session = _documentStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = _transactionMode
+                });
 
+                string key = GetKey<T>(stateName, grainId);
+                
                 var storedData = await session.LoadAsync<T>(key);
                 if (storedData != null)
                 {
@@ -46,17 +79,30 @@ namespace Orleans.Providers.RavenDb.StorageProviders
                 throw new OrleansException($"Failed to read state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}");
             }
         }
+
         public async Task WriteStateAsync<T>(string stateName, GrainId grainId, IGrainState<T> grainState)
         {
             _logger.LogDebug("Writing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
 
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
-                string key = GetKey<T>(stateName, grainId);
-                var etag = grainState.ETag;
+                using var session = _documentStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = _transactionMode
+                });
 
-                await session.StoreAsync(grainState.State, changeVector: etag, id: key);
+                string key = GetKey<T>(stateName, grainId);
+
+                if (_transactionMode == TransactionMode.SingleNode)
+                {
+                    await session.StoreAsync(grainState.State, changeVector: grainState.ETag, id: key);
+                }
+                else
+                {
+                    // no optimistic concurrency if we're using a cluster tx 
+                    await session.StoreAsync(grainState.State, id: key);
+                }
+
                 await session.SaveChangesAsync();
 
                 grainState.ETag = session.Advanced.GetChangeVectorFor(grainState.State);
@@ -80,10 +126,14 @@ namespace Orleans.Providers.RavenDb.StorageProviders
 
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
-                string key = GetKey<T>(stateName, grainId);
+                using var session = _documentStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = _transactionMode
+                });
 
+                string key = GetKey<T>(stateName, grainId);
                 session.Delete(key);
+                
                 await session.SaveChangesAsync();
 
                 grainState.RecordExists = false;
@@ -128,8 +178,11 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             }
         }
 
-        internal static string GetKey<T>(string grainType, GrainId grainId)
+        private string GetKey<T>(string grainType, GrainId grainId)
         {
+            if (_options.KeyGenerator != null)
+                return _options.KeyGenerator(grainType, grainId);
+
             var typeName = grainType != "state" ? grainType : typeof(T).Name;
             return $"{typeName}/{grainId}";
         }

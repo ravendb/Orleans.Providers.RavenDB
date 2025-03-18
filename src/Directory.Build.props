@@ -22,8 +22,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
 
-    <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\..\Orleans.Providers.RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>

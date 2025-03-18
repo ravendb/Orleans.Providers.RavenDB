@@ -57,8 +57,6 @@ namespace Orleans.Providers.RavenDb.Reminders
             }
         }
 
-
-
         public Task Init() => _initDatabase.Value;
 
         public async Task<ReminderTableData> ReadRows(GrainId grainId)
@@ -242,6 +240,5 @@ namespace Orleans.Providers.RavenDb.Reminders
                     };
             }
         }
-
     }
 }

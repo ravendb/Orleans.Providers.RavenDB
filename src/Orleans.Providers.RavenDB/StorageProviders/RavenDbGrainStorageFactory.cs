@@ -1,7 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Orleans.Providers.RavenDb.Configuration;
+using Orleans.Serialization;
 using Orleans.Storage;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
+using static Microsoft.IO.RecyclableMemoryStreamManager;
 
 namespace Orleans.Providers.RavenDb.StorageProviders
 {
@@ -12,9 +16,11 @@ namespace Orleans.Providers.RavenDb.StorageProviders
         /// </summary>
         public static IGrainStorage Create(IServiceProvider services, string name)
         {
-            var optionsMonitor = services.GetRequiredService<IOptionsMonitor<RavenDbOptions>>();
-            
-            return ActivatorUtilities.CreateInstance<RavenDbGrainStorage>(services, optionsMonitor.Get(name));
+            var optionsMonitor = services.GetRequiredService<IOptionsMonitor<RavenDbGrainStorageOptions>>();
+
+            var options = optionsMonitor.Get(name);
+
+            return ActivatorUtilities.CreateInstance<RavenDbGrainStorage>(services, options);
         }
     }
 }

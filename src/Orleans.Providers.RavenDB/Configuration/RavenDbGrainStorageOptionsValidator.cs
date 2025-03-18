@@ -2,10 +2,10 @@
 {
     public sealed class RavenDbGrainStorageOptionsValidator : IConfigurationValidator
     {
-        private readonly RavenDbOptions _options;
+        private readonly RavenDbGrainStorageOptions _options;
         private readonly string _name;
 
-        public RavenDbGrainStorageOptionsValidator(RavenDbOptions options, string name)
+        public RavenDbGrainStorageOptionsValidator(RavenDbGrainStorageOptions options, string name)
         {
             _options = options;
             _name = name;

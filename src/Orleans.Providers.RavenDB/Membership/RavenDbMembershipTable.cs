@@ -70,7 +70,10 @@ public class RavenDbMembershipTable : IMembershipTable
             {
                 using var session = _documentStore.OpenAsyncSession(_databaseName);
                 // Check for existing entries or ensure the database exists
-                var count = await session.Query<MembershipEntryDocument>().CountAsync();
+                var count = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
+                    .Where(x => x.ClusterId == _clusterId)
+                    .CountAsync();
+
                 _logger.LogInformation($"Existing membership entries: {count}");
             }
         }

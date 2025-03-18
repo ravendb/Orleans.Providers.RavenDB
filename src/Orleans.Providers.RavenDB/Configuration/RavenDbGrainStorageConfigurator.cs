@@ -2,7 +2,7 @@
 
 namespace Orleans.Providers.RavenDb.Configuration
 {
-    internal class RavenDbGrainStorageConfigurator : IPostConfigureOptions<RavenDbOptions>
+    internal class RavenDbGrainStorageConfigurator : IPostConfigureOptions<RavenDbGrainStorageOptions>
     {
         private readonly IServiceProvider _serviceProvider;
 
@@ -12,7 +12,7 @@ namespace Orleans.Providers.RavenDb.Configuration
         }
 
         /// <inheritdoc/>
-        public void PostConfigure(string name, RavenDbOptions options)
+        public void PostConfigure(string name, RavenDbGrainStorageOptions options)
         {
         }
     }

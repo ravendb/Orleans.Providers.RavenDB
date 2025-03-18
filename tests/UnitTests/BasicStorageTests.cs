@@ -1,7 +1,14 @@
-﻿using UnitTests.Grains;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Orleans;
+using UnitTests.Grains;
 using UnitTests.Infrastructure;
 using Xunit;
 using Orleans.Runtime;
+using Orleans.TestingHost;
+using Microsoft.Extensions.Hosting;
+using Orleans.Hosting;
+using Orleans.Providers.RavenDb.StorageProviders;
+using Raven.Client.Documents;
 
 namespace UnitTests
 {
@@ -80,7 +87,7 @@ namespace UnitTests
             var grain = _fixture.Client.GetGrain<IOrderGrain>(grainId);
 
             await grain.AddItem(new Product { Name = "Test Product", Price = 100 });
-
+            
             // Simulate external modification between read & write
             await grain.OnBeforeWriteStateAsync(script: "this.TotalPrice += 5");
 
@@ -305,6 +312,54 @@ namespace UnitTests
             }
         }
 
+        [Fact]
+        public async Task GrainStorage_ShouldHandleStringKeyGrain()
+        {
+            //var id = "dell laptop";
 
+            var productDetails = new ProductDetails() { Name = "Laptop", UnitPrice = 1500};
+
+            var grain = _fixture.Client.GetGrain<IProductGrain>(productDetails.Id);
+            await grain.SetProduct(productDetails);
+            
+            // Force grain deactivation
+            await grain.ForceDeactivate();
+
+            // Wait briefly to allow deactivation
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            var inventoryGrain = _fixture.Client.GetGrain<IInventoryGrain>("shop");
+            var products = await inventoryGrain.GetAllProductsAsync();
+
+            Assert.Single(products);
+
+            var productGrain = _fixture.Client.GetGrain<IProductGrain>(products.Single().Id);
+            var retrievedProduct = await productGrain.GetProduct();
+            Assert.NotNull(retrievedProduct);
+            Assert.Equal("Laptop", retrievedProduct.Name);
+            Assert.Equal(1500, retrievedProduct.UnitPrice);
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldPersistStringKeyAcrossDeactivation()
+        {
+            var grain = _fixture.Client.GetGrain<IProductGrain>("Products/products/67890");
+
+            await grain.SetProduct(new ProductDetails { Name = "Smartphone", UnitPrice = 800 });
+
+            // Force grain deactivation
+            await grain.ForceDeactivate();
+
+            // Wait briefly to allow deactivation
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            // Reactivate grain
+            var reactivatedGrain = _fixture.Client.GetGrain<IProductGrain>("Products/products/67890");
+            var retrievedProduct = await reactivatedGrain.GetProduct();
+
+            Assert.NotNull(retrievedProduct);
+            Assert.Equal("Smartphone", retrievedProduct.Name);
+            Assert.Equal(800, retrievedProduct.UnitPrice);
+        }
     }
 }
