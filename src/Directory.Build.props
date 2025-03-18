@@ -1,0 +1,33 @@
+﻿<Project>
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/ravendb/Orleans.Providers.RavenDB</PackageProjectUrl>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <RepositoryType>git</RepositoryType>
+    <Authors>Hibernating Rhinos</Authors>
+    <PackageTags>orleans;ravendb</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\Orleans.Providers.RavenDB.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+    <None Include="..\..\scripts\assets\icon.png" Pack="true" Visible="false" PackagePath="" />
+  </ItemGroup>
+</Project>
