@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 
 namespace UnitTests.Infrastructure;
 
-
 public class RavenDbStorageFixture : RavenDbFixture
 {
     protected override void ConfigureTestCluster(TestClusterBuilder builder)

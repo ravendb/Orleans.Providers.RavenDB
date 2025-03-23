@@ -1,14 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Orleans;
-using UnitTests.Grains;
+﻿using UnitTests.Grains;
 using UnitTests.Infrastructure;
 using Xunit;
 using Orleans.Runtime;
-using Orleans.TestingHost;
-using Microsoft.Extensions.Hosting;
-using Orleans.Hosting;
-using Orleans.Providers.RavenDb.StorageProviders;
-using Raven.Client.Documents;
 
 namespace UnitTests
 {
