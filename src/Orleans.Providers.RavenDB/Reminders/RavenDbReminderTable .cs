@@ -3,6 +3,7 @@ using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 
@@ -22,7 +23,6 @@ namespace Orleans.Providers.RavenDb.Reminders
         {
             _options = options;
             _logger = logger;
-
 
             _initDatabase = new Lazy<Task>(InitializeDocumentStoreAsync);
         }
@@ -167,13 +167,15 @@ namespace Orleans.Providers.RavenDb.Reminders
 
                 var key = GetKey(entry.GrainId, entry.ReminderName);
 
-                var reminder = await session.LoadAsync<RavenDbReminderDocument>(key) ?? new RavenDbReminderDocument();
-                reminder.GrainId = entry.GrainId.ToString();
-                reminder.ReminderName = entry.ReminderName;
-                reminder.StartAt = entry.StartAt;
-                reminder.Period = entry.Period;
-                reminder.LastUpdated = DateTime.UtcNow;
-                reminder.HashCode = entry.GrainId.GetUniformHashCode();
+                var reminder =  new RavenDbReminderDocument
+                {
+                    GrainId = entry.GrainId.ToString(),
+                    ReminderName = entry.ReminderName,
+                    StartAt = entry.StartAt,
+                    Period = entry.Period,
+                    LastUpdated = DateTime.UtcNow,
+                    HashCode = entry.GrainId.GetUniformHashCode()
+                };
 
                 await session.StoreAsync(reminder, changeVector: entry.ETag, id: key);
                 await session.SaveChangesAsync();
@@ -197,15 +199,15 @@ namespace Orleans.Providers.RavenDb.Reminders
                 using var session = _documentStore.OpenAsyncSession();
                 var key = GetKey(grainId, reminderName);
 
-                var reminder = await session.LoadAsync<RavenDbReminderDocument>(key);
-                if (reminder == null ||
-                    session.Advanced.GetChangeVectorFor(reminder) != eTag) // ETag mismatch
-                    return false;
-
-                session.Delete(reminder);
+                session.Delete(key, expectedChangeVector: eTag);
                 await session.SaveChangesAsync();
 
                 return true;
+            }
+            catch (ConcurrencyException)
+            {
+                // reminder does not exist or ETag mismatch
+                return false;
             }
             catch (Exception ex)
             {
