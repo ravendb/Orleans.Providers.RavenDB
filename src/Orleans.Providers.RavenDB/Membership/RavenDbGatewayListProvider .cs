@@ -18,9 +18,15 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
     private readonly ILogger _logger;
     private IDocumentStore _documentStore;
 
-    public TimeSpan MaxStaleness { get; } = TimeSpan.FromSeconds(30); // Default staleness duration
+    /// <summary>
+    /// The maximum duration a gateway list can be stale before being refreshed.
+    /// </summary>
+    public TimeSpan MaxStaleness { get; } = TimeSpan.FromSeconds(30);
 
-    public bool IsUpdatable { get; } = true; // Gateways can update dynamically
+    /// <summary>
+    /// Indicates whether the gateway list is dynamic and can be updated at runtime.
+    /// </summary>
+    public bool IsUpdatable { get; } = true;
 
     public RavenDbGatewayListProvider(IOptions<RavenDbMembershipOptions> options, ILogger logger)
     {
@@ -50,6 +56,10 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
 
     }
 
+    /// <summary>
+    /// Retrieves a list of currently active gateway URIs from RavenDB.
+    /// </summary>
+    /// <returns>A list of URIs pointing to active Orleans gateways.</returns>
     public async Task<IList<Uri>> GetGateways()
     {
         _logger.LogDebug("Retrieving active gateways from RavenDB for ClusterId='{ClusterId}'", _options.ClusterId);

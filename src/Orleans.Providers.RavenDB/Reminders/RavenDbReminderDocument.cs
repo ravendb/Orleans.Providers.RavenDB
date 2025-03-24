@@ -5,12 +5,39 @@
     /// </summary>
     public class RavenDbReminderDocument
     {
-        public string Id { get; set; }    
-        public string GrainId { get; set; } 
+        /// <summary>
+        /// The unique document identifier in RavenDB.
+        /// </summary>
+        public string Id { get; set; }
+
+        /// <summary>
+        /// The serialized grain ID associated with the reminder.
+        /// </summary>
+        public string GrainId { get; set; }
+
+        /// <summary>
+        /// The name of the reminder.
+        /// </summary>
         public string ReminderName { get; set; }
+
+        /// <summary>
+        /// The time at which the reminder was first scheduled to fire.
+        /// </summary>
         public DateTime StartAt { get; set; }
+
+        /// <summary>
+        /// The interval between reminder firings.
+        /// </summary>
         public TimeSpan Period { get; set; }
+
+        /// <summary>
+        /// The last time the reminder was updated.
+        /// </summary>
         public DateTime LastUpdated { get; set; }
+
+        /// <summary>
+        /// The hash code used for consistent hashing of the reminder.
+        /// </summary>
         public uint HashCode { get; set; }
         
     }

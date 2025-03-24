@@ -11,6 +11,7 @@ namespace Orleans.Providers.RavenDb.Reminders
 {
     /// <summary>
     /// Represents the reminder table storage using RavenDB for Orleans reminders.
+    /// Provides methods to read, write, update, and remove reminder entries.
     /// </summary>
     public class RavenDbReminderTable : IReminderTable
     {
@@ -59,6 +60,11 @@ namespace Orleans.Providers.RavenDb.Reminders
 
         public Task Init() => _initDatabase.Value;
 
+        /// <summary>
+        /// Reads all reminder rows for the specified grain.
+        /// </summary>
+        /// <param name="grainId">The grain ID to query for reminders.</param>
+        /// <returns>A <see cref="ReminderTableData"/> instance containing all reminders for the grain.</returns>
         public async Task<ReminderTableData> ReadRows(GrainId grainId)
         {
             _logger.LogDebug("Reading reminder rows for GrainId={GrainId}", grainId);
@@ -85,6 +91,12 @@ namespace Orleans.Providers.RavenDb.Reminders
             }
         }
 
+        /// <summary>
+        /// Reads all reminders whose hash codes fall within a given range.
+        /// </summary>
+        /// <param name="begin">The start of the hash range (exclusive).</param>
+        /// <param name="end">The end of the hash range (inclusive).</param>
+        /// <returns>A <see cref="ReminderTableData"/> with matching reminder entries.</returns>
         public async Task<ReminderTableData> ReadRows(uint begin, uint end)
         {
             _logger.LogDebug("Reading reminder rows for Range {BeginHash} to {EndHash}", begin, end);
@@ -125,6 +137,12 @@ namespace Orleans.Providers.RavenDb.Reminders
 
         }
 
+        /// <summary>
+        /// Reads a single reminder entry by grain ID and reminder name.
+        /// </summary>
+        /// <param name="grainId">The grain ID.</param>
+        /// <param name="reminderName">The name of the reminder.</param>
+        /// <returns>The matching <see cref="ReminderEntry"/> or null if not found.</returns>
         public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
         {
             _logger.LogDebug("Reading single reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
@@ -155,6 +173,11 @@ namespace Orleans.Providers.RavenDb.Reminders
             }
         }
 
+        /// <summary>
+        /// Adds or updates a reminder row in the database.
+        /// </summary>
+        /// <param name="entry">The reminder entry to upsert.</param>
+        /// <returns>The ETag of the stored document after the operation.</returns>
         public async Task<string> UpsertRow(ReminderEntry entry)
         {
             _logger.LogDebug("Upserting reminder row for GrainId={GrainId}, ReminderName={ReminderName}", entry.GrainId, entry.ReminderName);
@@ -190,6 +213,13 @@ namespace Orleans.Providers.RavenDb.Reminders
 
         }
 
+        /// <summary>
+        /// Removes a reminder entry if the ETag matches.
+        /// </summary>
+        /// <param name="grainId">The grain ID.</param>
+        /// <param name="reminderName">The reminder name.</param>
+        /// <param name="eTag">The expected change vector (ETag).</param>
+        /// <returns><c>true</c> if the entry was deleted; <c>false</c> if not found or the ETag did not match.</returns>
         public async Task<bool> RemoveRow(GrainId grainId, string reminderName, string eTag)
         {
             _logger.LogDebug("Removing reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
@@ -216,6 +246,9 @@ namespace Orleans.Providers.RavenDb.Reminders
             }
         }
 
+        /// <summary>
+        /// Test-only method that deletes all reminder entries from the table.
+        /// </summary>
         public async Task TestOnlyClearTable()
         {
             using var session = _documentStore.OpenAsyncSession();

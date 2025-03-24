@@ -16,15 +16,12 @@ namespace Orleans.Providers.RavenDb.Reminders
         /// <returns>The silo builder with RavenDB reminder table configured.</returns>
         public static ISiloBuilder AddRavenDbReminderTable(this ISiloBuilder builder, Action<RavenDbReminderOptions> configureOptions)
         {
-            // Add the RavenDB reminder table to the silo
             return builder.ConfigureServices(services =>
             {
-                // Configure the reminder table options
                 var options = new RavenDbReminderOptions();
                 configureOptions(options);
                 services.AddSingleton(options);
 
-                // Register the reminder table provider
                 services.AddReminders();
                 services.AddSingleton<IReminderTable, RavenDbReminderTable>();
                 services.AddSingleton<IConfigurationValidator, RavenDbReminderOptionsValidator>();

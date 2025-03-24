@@ -10,7 +10,8 @@ using Raven.Client.ServerWide.Operations;
 namespace Orleans.Providers.RavenDb.Membership;
 
 /// <summary>
-/// Implements the Orleans IMembershipTable interface using RavenDB as the storage provider.
+/// Implements the Orleans <see cref="IMembershipTable"/> interface using RavenDB as the storage provider.
+/// Responsible for managing silo membership entries and the global membership table version.
 /// </summary>
 public class RavenDbMembershipTable : IMembershipTable
 {
@@ -85,6 +86,11 @@ public class RavenDbMembershipTable : IMembershipTable
 
     }
 
+    /// <summary>
+    /// Reads the membership entry corresponding to the given <paramref name="key"/>.
+    /// </summary>
+    /// <param name="key">The <see cref="SiloAddress"/> of the entry to read.</param>
+    /// <returns>The membership data including table version and ETags.</returns>
     public async Task<MembershipTableData> ReadRow(SiloAddress key)
     {
         _logger.LogDebug("Reading membership entry for SiloAddress={SiloAddress}", key);
@@ -118,6 +124,9 @@ public class RavenDbMembershipTable : IMembershipTable
         }
     }
 
+    /// <summary>
+    /// Reads all membership entries from the table along with the current table version.
+    /// </summary>
     public async Task<MembershipTableData> ReadAll()
     {
         _logger.LogDebug("Reading all membership entries for ClusterId={ClusterId}", _options.ClusterId);
@@ -150,6 +159,9 @@ public class RavenDbMembershipTable : IMembershipTable
         }
     }
 
+    /// <summary>
+    /// Attempts to insert a new membership entry. Will fail if an entry already exists or version is outdated.
+    /// </summary>
     public async Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion)
     {
         _logger.LogDebug("Inserting membership entry for SiloAddress={SiloAddress}", entry.SiloAddress);
@@ -208,6 +220,9 @@ public class RavenDbMembershipTable : IMembershipTable
 
     }
 
+    /// <summary>
+    /// Updates an existing membership entry if the provided ETag and table version are valid.
+    /// </summary>
     public async Task<bool> UpdateRow(MembershipEntry entry, string etag, TableVersion tableVersion)
     {
         _logger.LogDebug("Updating membership entry for SiloAddress={SiloAddress}", entry.SiloAddress);
@@ -265,6 +280,9 @@ public class RavenDbMembershipTable : IMembershipTable
         }
     }
 
+    /// <summary>
+    /// Updates the <c>IAmAliveTime</c> field for the given membership entry's silo.
+    /// </summary>
     public async Task UpdateIAmAlive(MembershipEntry entry)
     {
         _logger.LogDebug("Updating IAmAliveTime for SiloAddress={SiloAddress}", entry.SiloAddress);
@@ -292,6 +310,9 @@ public class RavenDbMembershipTable : IMembershipTable
 
     }
 
+    /// <summary>
+    /// Deletes all membership entries for a given cluster.
+    /// </summary>
     public async Task DeleteMembershipTableEntries(string clusterId)
     {
         _logger.LogDebug("Deleting membership table entries for ClusterId={ClusterId}", clusterId);
@@ -318,6 +339,9 @@ public class RavenDbMembershipTable : IMembershipTable
         }
     }
 
+    /// <summary>
+    /// Cleans up entries for silos that are no longer active and whose <c>IAmAliveTime</c> is older than the cutoff.
+    /// </summary>
     public async Task CleanupDefunctSiloEntries(DateTimeOffset cutoff)
     {
         _logger.LogDebug("Cleaning up defunct silo entries before cutoff={Cutoff}", cutoff);
