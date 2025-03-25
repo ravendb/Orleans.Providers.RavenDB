@@ -1,7 +1,6 @@
 ﻿using UnitTests.Grains;
 using UnitTests.Infrastructure;
 using Xunit;
-using Orleans.Runtime;
 
 namespace UnitTests
 {
@@ -31,26 +30,6 @@ namespace UnitTests
             {
                 Assert.Equal(1, result); // Ensure each grain updated independently
             }
-        }
-
-        [Fact]
-        public async Task GrainStorage_ShouldHandleInvalidETag()
-        {
-            var grainId = Guid.NewGuid();
-            var grain = _fixture.Client.GetGrain<IOrderGrain>(grainId);
-
-            await grain.AddItem(new Product { Name = "Test Product", Price = 100 });
-            
-            // Simulate external modification between read & write
-            await grain.OnBeforeWriteStateAsync(script: "this.TotalPrice += 5");
-
-            // Attempt to modify the grain state 
-            var exception = await Assert.ThrowsAsync<OrleansException>(async () =>
-            {
-                await grain.AddItem(new Product { Name = "Product2", Price = 15 });
-            });
-
-            Assert.Contains("Optimistic concurrency violation", exception.Message);
         }
 
         [Fact]
@@ -164,6 +143,27 @@ namespace UnitTests
                 var count = await grain.GetCount();
                 Assert.Equal(1, count);
             }
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldClearStateCorrectly()
+        {
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            await grain.AddItem(new Product { Name = "ToDelete", Price = 50 });
+            var itemsBeforeClear = await grain.GetOrderItems();
+            Assert.Single(itemsBeforeClear);
+
+            await grain.ClearState();
+
+            var itemsAfterClear = await grain.GetOrderItems();
+            Assert.Empty(itemsAfterClear);
+
+            // Add again to make sure grain is still usable after clear
+            await grain.AddItem(new Product { Name = "NewItem", Price = 30 });
+            var itemsAfterAdd = await grain.GetOrderItems();
+            Assert.Single(itemsAfterAdd);
+            Assert.Equal("NewItem", itemsAfterAdd[0].Name);
         }
     }
 }

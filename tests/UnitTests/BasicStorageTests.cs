@@ -354,5 +354,54 @@ namespace UnitTests
             Assert.Equal("Smartphone", retrievedProduct.Name);
             Assert.Equal(800, retrievedProduct.UnitPrice);
         }
+
+        [Fact]
+        public async Task GrainStorage_ShouldClearStateCorrectly()
+        {
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            await grain.AddItem(new Product { Name = "ToDelete", Price = 50 });
+            var itemsBeforeClear = await grain.GetOrderItems();
+            Assert.Single(itemsBeforeClear);
+
+            await grain.ClearState();
+
+            var itemsAfterClear = await grain.GetOrderItems();
+            Assert.Empty(itemsAfterClear);
+
+            // Add again to make sure grain is still usable after clear
+            await grain.AddItem(new Product { Name = "NewItem", Price = 30 });
+            var itemsAfterAdd = await grain.GetOrderItems();
+            Assert.Single(itemsAfterAdd);
+            Assert.Equal("NewItem", itemsAfterAdd[0].Name);
+        }
+
+        [Fact]
+        public async Task GrainStorage_ShouldNotRestoreClearedStateAfterReactivation()
+        {
+            var id = 1;
+            var grain = _fixture.Client.GetGrain<IPlayerGrain>(id);
+
+            await grain.SetPlayerName("Temp Player");
+            await grain.Win();
+            var scoreBefore = await grain.GetPlayerScore();
+            Assert.Equal(1, scoreBefore);
+
+            await grain.ClearState();
+
+            // Force grain deactivation
+            await grain.ForceDeactivate();
+            await Task.Delay(TimeSpan.FromSeconds(2));
+
+            // Reactivate and ensure state was not restored
+            var reactivated = _fixture.Client.GetGrain<IPlayerGrain>(id);
+            var nameAfter = await reactivated.GetPlayerName();
+            var scoreAfter = await reactivated.GetPlayerScore();
+
+            Assert.Null(nameAfter);
+            Assert.Equal(0, scoreAfter);
+        }
+
+
     }
 }

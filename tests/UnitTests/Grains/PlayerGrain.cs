@@ -53,6 +53,11 @@ public class PlayerGrain : Grain<PlayerState>, IPlayerGrain
         DeactivateOnIdle(); // Request immediate deactivation
         return Task.CompletedTask;
     }
+
+    public Task ClearState()
+    {
+        return ClearStateAsync();
+    }
 }
 
 public class PlayerState
