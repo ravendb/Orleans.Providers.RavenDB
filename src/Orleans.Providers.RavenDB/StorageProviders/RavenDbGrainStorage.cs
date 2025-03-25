@@ -94,7 +94,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
                     entity = await session.LoadAsync<T>(key);
 
                     var inMemorySession = session as InMemoryDocumentSessionOperations;
-                    var blittableJson = inMemorySession!.JsonConverter.ToBlittable(grainState.State, documentInfo: null);
+                    using var blittableJson = inMemorySession!.JsonConverter.ToBlittable(grainState.State, documentInfo: null);
                     inMemorySession.JsonConverter.PopulateEntity(entity, key, blittableJson);
                 }
                 else
