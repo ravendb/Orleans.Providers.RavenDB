@@ -1,8 +1,8 @@
 # RavenDB-Orleans Provider
 
-[![Build](https://github.com/YOUR_GITHUB_USERNAME/ravendb-orleans/actions/workflows/build.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/ravendb-orleans/actions)
-[![NuGet](https://img.shields.io/nuget/v/RavenDB.Orleans.svg)](https://www.nuget.org/packages/RavenDB.Orleans/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Build](https://github.com/ravendb/Orleans.Providers.RavenDB/actions/workflows/orleansTests.yml/badge.svg)](https://github.com/ravendb/Orleans.Providers.RavenDB/actions/workflows/orleansTests.yml)
+[![NuGet](https://img.shields.io/nuget/v/Orleans.Providers.RavenDB.svg)](https://www.nuget.org/packages/Orleans.Providers.RavenDB/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 
 ## 📌 Overview
 
