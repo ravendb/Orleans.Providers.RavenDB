@@ -10,7 +10,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Orleans.Reminders" Version="9.1.2" />
 		<PackageReference Include="Microsoft.Orleans.Server" Version="9.1.2" />
-		<PackageReference Include="RavenDB.Client" Version="7.0.0" />
+		<PackageReference Include="RavenDB.Client" Version="6.2.0" />
 	</ItemGroup>
 
 </Project>
