@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <IsTransformWebConfigDisabled>false</IsTransformWebConfigDisabled>
+    <UserSecretsId>98f9767c-ea86-409e-bde7-f6d352a55cce</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.12.0" />
+    <PackageReference Include="Blazor.Serialization" Version="8.0.0" />
+    <PackageReference Include="Blazor.LocalStorage" Version="8.0.0" />
+    <PackageReference Include="Bogus" Version="35.5.0" />
+    <PackageReference Include="Microsoft.Orleans.Clustering.Cosmos" Version="8.*" />
+    <PackageReference Include="Microsoft.Orleans.Persistence.Cosmos" Version="8.*" />
+    <PackageReference Include="Microsoft.Orleans.Server" Version="9.*" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
+    <PackageReference Include="MudBlazor" Version="6.17.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Orleans.Providers.RavenDb\Orleans.Providers.RavenDb.csproj" />
+    <ProjectReference Include="..\Grains\Orleans.ShoppingCart.Grains.csproj" />
+  </ItemGroup>
+
+  <Target Name="ZipPublishOutput" AfterTargets="Publish">
+    <Delete Files="$(ProjectDir)\..\silo.zip" />
+    <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(ProjectDir)\..\silo.zip" />
+  </Target>
+
+</Project>
