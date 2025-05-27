@@ -42,10 +42,13 @@ public class RavenDbMembershipTable : IMembershipTable
             };
             _documentStore.Initialize();
 
-            // Ensure the database exists
-            var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
-            if (dbExists == false)
-                _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+            if (_options.EnsureDatabaseExists)
+            {
+                // Ensure the database exists
+                var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
+                if (dbExists == false)
+                    _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+            }
 
             var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
             if (indexes.Contains(nameof(MembershipByClusterIdAliveTimeStatusAndPort)) == false)

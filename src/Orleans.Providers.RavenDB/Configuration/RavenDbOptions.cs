@@ -32,5 +32,11 @@ namespace Orleans.Providers.RavenDb.Configuration
         /// Whether to wait for index updates after saving changes to ensure query consistency.
         /// </summary>
         public bool WaitForIndexesAfterSaveChanges { get; set; }
+
+        /// <summary>
+        /// Determines whether the provider should automatically create the database
+        /// if it does not already exist. 
+        /// </summary>
+        public bool EnsureDatabaseExists { get; set; } = true;
     }
 }
