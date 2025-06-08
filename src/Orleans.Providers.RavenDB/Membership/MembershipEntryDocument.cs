@@ -56,6 +56,10 @@
         /// </summary>
         public List<SuspectTime> SuspectTimes { get; set; }
 
+        /// <summary>
+        /// Identifies the ServiceId this membership entry belongs to. Used to support multiple ServiceIds in the same database.
+        /// </summary>
+        public string ServiceId { get; set; }
     }
 
     /// <summary>
@@ -73,6 +77,11 @@
         /// The current global version of the membership table.
         /// </summary>
         public int Version { get; set; }
+
+        /// <summary>
+        /// Identifies the ServiceId this table version belongs to. Used to isolate versioning across multiple ServiceIds.
+        /// </summary>
+        public string ServiceId { get; set; }
 
     }
 
