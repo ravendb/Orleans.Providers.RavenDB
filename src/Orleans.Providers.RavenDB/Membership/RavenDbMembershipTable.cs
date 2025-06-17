@@ -33,6 +33,13 @@ public class RavenDbMembershipTable : IMembershipTable
     {
         try
         {
+            if (_options.DocumentStore != null)
+            {
+                _documentStore = _options.DocumentStore;
+                _logger.LogInformation("Using externally provided DocumentStore.");
+                return;
+            }
+
             _documentStore = new DocumentStore
             {
                 Database = _options.DatabaseName,
