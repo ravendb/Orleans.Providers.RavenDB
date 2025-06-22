@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Providers.RavenDb.Configuration;
 using Orleans.Storage;
+using Raven.Client.Documents;
 
 namespace Orleans.Providers.RavenDb.StorageProviders;
 
@@ -81,5 +82,29 @@ public static class RavenDbGrainStorageExtensions
         services.AddSingleton(s => (ILifecycleParticipant<ISiloLifecycle>)s.GetRequiredKeyedService<IGrainStorage>(name));
 
         return services;
+    }
+
+    /// <summary>
+    /// Adds RavenDB grain storage to the silo with a named provider and a custom <see cref="IDocumentStore"/>.
+    /// </summary>
+    /// <param name="builder">The Orleans silo builder.</param>
+    /// <param name="name">The name of the storage provider.</param>
+    /// <param name="documentStore">The custom <see cref="IDocumentStore"/> to use.</param>
+    /// <param name="configureOptions">A delegate to further configure <see cref="RavenDbGrainStorageOptions"/>.</param>
+    /// <returns>The updated <see cref="ISiloBuilder"/>.</returns>
+    public static ISiloBuilder AddRavenDbGrainStorage(
+        this ISiloBuilder builder,
+        string name,
+        IDocumentStore documentStore,
+        Action<RavenDbGrainStorageOptions>? configureOptions = null)
+    {
+        return builder.ConfigureServices(services =>
+        {
+            services.AddRavenDbGrainStorage(name, options =>
+            {
+                options.DocumentStore = documentStore;
+                configureOptions?.Invoke(options);
+            });
+        }); ;
     }
 }

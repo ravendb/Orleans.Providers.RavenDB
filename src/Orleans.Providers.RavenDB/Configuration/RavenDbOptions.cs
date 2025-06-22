@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 
 namespace Orleans.Providers.RavenDb.Configuration
@@ -38,5 +39,10 @@ namespace Orleans.Providers.RavenDb.Configuration
         /// if it does not already exist. 
         /// </summary>
         public bool EnsureDatabaseExists { get; set; } = true;
+
+        /// <summary>
+        /// Allows injecting a custom RavenDB document store. If set, the internal creation will be skipped.
+        /// </summary>
+        public IDocumentStore? DocumentStore { get; set; }
     }
 }
