@@ -185,7 +185,8 @@ public class RavenDbMembershipTable : IMembershipTable
             };
 
             // Ensure the provided TableVersion is greater than the stored version
-            if (tableVersion.Version <= versionDoc.Version)
+            if (versionDoc.Version > 0 &&
+                tableVersion.Version <= versionDoc.Version)
             {
                 _logger.LogWarning("InsertRow failed due to outdated version. Provided={Provided}, Current={Current}",
                     tableVersion.Version, versionDoc.Version);
