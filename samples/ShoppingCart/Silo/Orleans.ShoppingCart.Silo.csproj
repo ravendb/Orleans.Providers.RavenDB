@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Orleans.Providers.RavenDb\Orleans.Providers.RavenDb.csproj" />
+    <ProjectReference Include="..\..\..\src\Orleans.Providers.RavenDB\Orleans.Providers.RavenDB.csproj" />
     <ProjectReference Include="..\Grains\Orleans.ShoppingCart.Grains.csproj" />
   </ItemGroup>
 
