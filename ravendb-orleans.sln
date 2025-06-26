@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{FB60A390
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "tests\UnitTests\UnitTests.csproj", "{27BF552C-7D34-43DB-8656-20C97D1D419E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Providers.RavenDb", "src\Orleans.Providers.RavenDb\Orleans.Providers.RavenDb.csproj", "{943AEEE8-7BD1-486C-9F07-1E372A8C30B8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Providers.RavenDB", "src\Orleans.Providers.RavenDB\Orleans.Providers.RavenDB.csproj", "{943AEEE8-7BD1-486C-9F07-1E372A8C30B8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libs", "libs", "{6B7E093E-8DAA-42FF-9044-B3D777D255D9}"
 EndProject

@@ -1,25 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-		<PackageReference Include="Microsoft.Orleans.Server" Version="9.1.2" />
-		<PackageReference Include="RavenDB.Embedded" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.1.2">
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+		<PackageReference Include="Microsoft.Orleans.Server" Version="9.2.0-preview3" />
+		<PackageReference Include="Microsoft.Orleans.TestingHost" Version="9.2.0-preview3" />
+		<PackageReference Include="MSTest.TestAdapter" Version="3.9.3" />
+		<PackageReference Include="MSTest.TestFramework" Version="3.9.3" />
+		<PackageReference Include="RavenDB.Embedded" Version="7.1.0-rc-71004" />
+		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.2.0-preview3">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="xunit" Version="2.6.5" />
-		<PackageReference Include="xunit.runner.console" Version="2.6.5">
+		<PackageReference Include="xunit" Version="2.9.3" />
+		<PackageReference Include="xunit.runner.console" Version="2.9.3">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="xunit.runner.visualstudio" Version="2.5.6">
+		<PackageReference Include="xunit.runner.visualstudio" Version="3.1.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -27,8 +31,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\libs\orleans\test\TesterInternal\TesterInternal.csproj" />
-	  <ProjectReference Include="..\..\src\Orleans.Providers.RavenDb\Orleans.Providers.RavenDb.csproj" />
+		<ProjectReference Include="..\..\libs\orleans\test\TesterInternal\TesterInternal.csproj" />
+		<ProjectReference Include="..\..\libs\orleans\test\TestInfrastructure\TestExtensions\TestExtensions.csproj" />
+		<ProjectReference Include="..\..\src\Orleans.Providers.RavenDB\Orleans.Providers.RavenDB.csproj" />
 	</ItemGroup>
 
 </Project>
