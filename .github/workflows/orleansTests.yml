@@ -3,16 +3,19 @@ name: tests/orleans
 on:
   push:
     branches:
-        - master
+      - master
 
   pull_request:
     branches:
-        - master
+      - master
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
@@ -32,3 +35,6 @@ jobs:
       env:
         SKIP_PERF: TRUE
       working-directory: ./tests/UnitTests
+
+    - name: List test folders
+      run: ls -R ./libs/orleans/test
