@@ -109,13 +109,15 @@ public class RavenDbMembershipTable : IMembershipTable
 
         try
         {
+            var tableVersionDocId = GetTableVersionDocId();
+
             using var session = _documentStore.OpenAsyncSession(_databaseName);
             var docId = GetDocumentId(key);
             var document = await session.LoadAsync<MembershipEntryDocument>(docId,
-                builder => builder.IncludeDocuments<TableVersionDocument>(x => GetTableVersionDocId(x.ServiceId, x.ClusterId)));
+                builder => builder.IncludeDocuments<TableVersionDocument>(x => tableVersionDocId));
 
             // Load the TableVersion separately
-            var versionDoc = await session.LoadAsync<TableVersionDocument>(GetTableVersionDocId());
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(tableVersionDocId);
             var tableVersion = versionDoc != null
                 ? new TableVersion(versionDoc.Version, session.Advanced.GetChangeVectorFor(versionDoc))
                 : new TableVersion(0, "0"); // Default version if no version document exists
@@ -147,9 +149,11 @@ public class RavenDbMembershipTable : IMembershipTable
         {
             using var session = _documentStore.OpenAsyncSession(_databaseName);
 
+            var tableVersionDocId = GetTableVersionDocId();
+
             var documents = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
                 .Where(doc => doc.ClusterId == _clusterId && doc.ServiceId == _serviceId)
-                .Include(x => GetDocumentId(x.ServiceId, x.ClusterId, x.SiloAddress))
+                .Include(x => tableVersionDocId)
                 .ToListAsync();
 
             var entriesWithETags = documents
@@ -157,7 +161,7 @@ public class RavenDbMembershipTable : IMembershipTable
                 .ToList();
 
             // Load the global table version
-            var versionDoc = await session.LoadAsync<TableVersionDocument>(GetTableVersionDocId());
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(tableVersionDocId);
             var tableVersion = versionDoc != null
                 ? new TableVersion(versionDoc.Version, session.Advanced.GetChangeVectorFor(versionDoc))
                 : new TableVersion(0, "0"); // Default if no version doc exists
@@ -245,14 +249,16 @@ public class RavenDbMembershipTable : IMembershipTable
         try
         {
             var documentId = GetDocumentId(entry.SiloAddress);
+            var tableVersionDocId = GetTableVersionDocId();
+
             using var session = _documentStore.OpenAsyncSession(_databaseName);
-            var document = await session.LoadAsync<MembershipEntryDocument>(documentId, builder => builder.IncludeDocuments(x => GetDocumentId(x.ServiceId, x.ClusterId, x.SiloAddress)));
+            var document = await session.LoadAsync<MembershipEntryDocument>(documentId, builder => builder.IncludeDocuments(x => tableVersionDocId));
 
             if (document == null || session.Advanced.GetChangeVectorFor(document) != etag)
                 return false; // Document doesn't exist or ETag mismatch
 
             // Load the global TableVersion
-            var versionDoc = await session.LoadAsync<TableVersionDocument>(GetTableVersionDocId());
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(tableVersionDocId);
 
             // Ensure the provided TableVersion is greater than the stored version
             if (versionDoc == null || tableVersion.Version <= versionDoc.Version)
@@ -344,7 +350,8 @@ public class RavenDbMembershipTable : IMembershipTable
                 session.Delete(entry);
             }
 
-            session.Delete(clusterId);
+            var tableVersionDocId = $"TableVersion/{_serviceId}/{clusterId}";
+            session.Delete(tableVersionDocId);
             await session.SaveChangesAsync();
         }
         catch (Exception ex)
@@ -364,9 +371,11 @@ public class RavenDbMembershipTable : IMembershipTable
         try
         {
             using var session = _documentStore.OpenAsyncSession(_databaseName);
+            var tableVersionDocId = GetTableVersionDocId();
+
             var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
                 .Where(e => e.IAmAliveTime < cutoff.UtcDateTime && e.Status != SiloStatus.Active.ToString())
-                 .Include(x => GetDocumentId(x.ServiceId, x.ClusterId, x.SiloAddress))
+                 .Include(x => tableVersionDocId)
                 .ToListAsync();
 
             foreach (var entry in defunctEntries)
@@ -374,7 +383,7 @@ public class RavenDbMembershipTable : IMembershipTable
                 session.Delete(entry);
             }
 
-            var versionDoc = await session.LoadAsync<TableVersionDocument>(GetTableVersionDocId());
+            var versionDoc = await session.LoadAsync<TableVersionDocument>(tableVersionDocId);
             versionDoc.Version += 1;
 
             await session.SaveChangesAsync();
@@ -438,24 +447,7 @@ public class RavenDbMembershipTable : IMembershipTable
     /// </summary>
     private string GetTableVersionDocId()
     {
-        return _serviceId == _clusterId
-            ? _clusterId
-            : $"TableVersion/{_serviceId}/{_clusterId}";
-    }
-
-    private static string GetDocumentId(string serviceId, string clusterId, string siloAddress)
-    {
-        if (serviceId == clusterId)
-            return $"Membership/{clusterId}/{siloAddress}";
-
-        return $"Membership/{serviceId}/{clusterId}/{siloAddress}";
-    }
-
-    private static string GetTableVersionDocId(string serviceId, string clusterId)
-    {
-        return serviceId == clusterId
-            ? clusterId
-            : $"TableVersion/{serviceId}/{clusterId}";
+        return $"TableVersion/{_serviceId}/{_clusterId}";
     }
 
     internal class MembershipByClusterIdAliveTimeStatusAndPort : AbstractIndexCreationTask<MembershipEntryDocument>
