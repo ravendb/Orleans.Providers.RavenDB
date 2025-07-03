@@ -11,7 +11,7 @@
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
 		<PackageReference Include="Microsoft.Orleans.Server" Version="9.1.2" />
 		<PackageReference Include="RavenDB.Embedded" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.2.0-preview3">
+		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.1.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -29,7 +29,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\libs\orleans\test\TesterInternal\TesterInternal.csproj" />
-		<ProjectReference Include="..\..\libs\orleans\test\TestInfrastructure\TestExtensions\TestExtensions.csproj" />
 		<ProjectReference Include="..\..\src\Orleans.Providers.RavenDB\Orleans.Providers.RavenDB.csproj" />
 	</ItemGroup>
 
