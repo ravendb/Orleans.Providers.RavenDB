@@ -15,7 +15,7 @@ namespace UnitTests
         {
             fixture.EnsurePreconditionsMet();
 
-            _runner = new RavenDbGrainPersistenceTestsRunner(output, fixture, grainNamespace);
+            _runner = new GrainPersistenceTestsRunner(output, fixture, grainNamespace);
         }
 
 
