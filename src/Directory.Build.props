@@ -1,6 +1,6 @@
 ﻿<Project>
   <PropertyGroup>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/ravendb/Orleans.Providers.RavenDB</PackageProjectUrl>
