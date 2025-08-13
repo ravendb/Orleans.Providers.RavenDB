@@ -7,7 +7,7 @@ namespace Orleans.Providers.RavenDb.Hosting
 {
     internal sealed class RavenDbGrainStorageProviderBuilder : IProviderBuilder<ISiloBuilder>
     {
-        public void Configure(ISiloBuilder builder, string name, IConfigurationSection section)
+        public void Configure(ISiloBuilder builder, string? name, IConfigurationSection section)
         {
             builder.AddRavenDbGrainStorage(name, section.Bind);
         }
