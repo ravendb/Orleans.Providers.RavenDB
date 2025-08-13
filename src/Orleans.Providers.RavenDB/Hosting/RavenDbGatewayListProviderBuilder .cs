@@ -10,7 +10,7 @@ namespace Orleans.Providers.RavenDb.Hosting;
 
 internal sealed class RavenDbGatewayListProviderBuilder : IProviderBuilder<IClientBuilder>
 {
-    public void Configure(IClientBuilder builder, string name, IConfigurationSection section)
+    public void Configure(IClientBuilder builder, string? name, IConfigurationSection section)
     {
         builder.ConfigureServices(services =>
         {

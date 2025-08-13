@@ -8,7 +8,7 @@ namespace Orleans.Providers.RavenDb.Hosting;
 
 internal sealed class RavenDbReminderProviderBuilder : IProviderBuilder<ISiloBuilder>
 {
-    public void Configure(ISiloBuilder builder, string name, IConfigurationSection section)
+    public void Configure(ISiloBuilder builder, string? name, IConfigurationSection section)
     {
         builder.AddRavenDbReminderTable(section.Bind);
     }

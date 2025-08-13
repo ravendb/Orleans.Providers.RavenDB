@@ -12,7 +12,7 @@ namespace Orleans.Providers.RavenDb.Configuration
         }
 
         /// <inheritdoc/>
-        public void PostConfigure(string name, RavenDbGrainStorageOptions options)
+        public void PostConfigure(string? name, RavenDbGrainStorageOptions options)
         {
         }
     }
