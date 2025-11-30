@@ -24,7 +24,7 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase, IClassFixtu
 
     protected override IGatewayListProvider CreateGatewayListProvider(ILogger logger)
     {
-        return new RavenDbGatewayListProvider(Options.Create(MembershipOptions), logger);
+        return new RavenDbGatewayListProvider(Options.Create(MembershipOptions), NullLogger<RavenDbGatewayListProvider>.Instance);
     }
 
     protected override IMembershipTable CreateMembershipTable(ILogger logger)

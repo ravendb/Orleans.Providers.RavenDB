@@ -28,7 +28,7 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
     /// </summary>
     public bool IsUpdatable { get; } = true;
 
-    public RavenDbGatewayListProvider(IOptions<RavenDbMembershipOptions> options, ILogger logger)
+    public RavenDbGatewayListProvider(IOptions<RavenDbMembershipOptions> options, ILogger<RavenDbGatewayListProvider> logger)
     {
         _options = options.Value;
         _logger = logger;
