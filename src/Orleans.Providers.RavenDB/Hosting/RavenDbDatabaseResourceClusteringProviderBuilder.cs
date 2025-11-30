@@ -31,7 +31,6 @@ namespace Orleans.Providers.RavenDb.Hosting
                 ConnectionString = ravenCs
             };
 
-            // 3. Extract key values for your Options object
             if (!csBuilder.TryGetValue("Url", out var url))
                 throw new InvalidOperationException("RavenDB connection string is missing 'Url'.");
 
