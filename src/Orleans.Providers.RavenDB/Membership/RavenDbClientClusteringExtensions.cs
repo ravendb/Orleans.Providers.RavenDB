@@ -62,8 +62,7 @@ namespace Orleans.Providers.RavenDb.Membership
             services.AddSingleton<IGatewayListProvider>(sp =>
             {
                 var opts = sp.GetRequiredService<IOptions<RavenDbMembershipOptions>>();
-                var logger = sp.GetRequiredService<ILoggerFactory>()
-                               .CreateLogger(nameof(RavenDbGatewayListProvider));
+                var logger = sp.GetRequiredService<ILogger<RavenDbGatewayListProvider>>();
                 return new RavenDbGatewayListProvider(opts, logger);
             });
         }

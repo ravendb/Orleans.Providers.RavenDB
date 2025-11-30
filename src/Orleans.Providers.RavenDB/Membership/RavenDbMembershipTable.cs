@@ -22,7 +22,8 @@ public class RavenDbMembershipTable : IMembershipTable
     private readonly string _clusterId;
     private readonly string _serviceId;
 
-    public RavenDbMembershipTable(RavenDbMembershipOptions options, ILogger<RavenDbMembershipTable> logger)
+    public RavenDbMembershipTable(RavenDbMembershipOptions options,
+        ILogger<RavenDbMembershipTable> logger)
     {
         _options = options;
         _logger = logger;
