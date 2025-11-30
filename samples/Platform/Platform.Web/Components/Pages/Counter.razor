@@ -1,0 +1,29 @@
+﻿@page "/counter"
+@rendermode InteractiveServer
+@inject GrainApiClient GrainClient
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current guid: @currentGuid</p>
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="Create">Create</button>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Increment</button>
+
+@code {
+    private int currentCount = 0;
+    private Guid currentGuid = Guid.Empty;
+
+    private void Create()
+    {
+        currentGuid = Guid.NewGuid();
+    }
+
+    private void IncrementCount()
+    {
+        var currentCount = GrainClient.CallIncrementAsync(currentGuid);
+    }
+}

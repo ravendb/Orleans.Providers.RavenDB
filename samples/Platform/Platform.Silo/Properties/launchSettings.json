@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "Platform.Silo": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:51891;http://localhost:51892",
+      "Aspire": {
+        "Seq": {
+          "DisableHealthChecks": false,
+          "ServerUrl": "http://localhost:5341"
+        }
+      }
+    }
+  }
+}
