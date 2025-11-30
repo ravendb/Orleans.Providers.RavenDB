@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Orleans.Providers.RavenDb.Configuration;
 using Orleans.Serialization;
 using Orleans.Storage;
@@ -7,6 +6,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 
 namespace Orleans.Providers.RavenDb.StorageProviders
 {
@@ -178,6 +179,14 @@ namespace Orleans.Providers.RavenDb.StorageProviders
                     Conventions = _options.Conventions,
                     Urls = _options.Urls
                 }.Initialize();
+
+                if (_options.EnsureDatabaseExists)
+                {
+                    // Ensure the database exists
+                    var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
+                    if (dbExists == false)
+                        _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                }
 
                 return Task.CompletedTask;
             }
