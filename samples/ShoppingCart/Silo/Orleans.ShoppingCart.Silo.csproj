@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+	<TargetFramework>net9.0</TargetFramework>
     <IsTransformWebConfigDisabled>false</IsTransformWebConfigDisabled>
     <UserSecretsId>98f9767c-ea86-409e-bde7-f6d352a55cce</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
