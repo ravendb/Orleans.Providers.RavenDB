@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
@@ -9,9 +9,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-		<PackageReference Include="Microsoft.Orleans.Server" Version="9.*" />
+		<PackageReference Include="Microsoft.Orleans.Server" Version="9.2.1" />
 		<PackageReference Include="RavenDB.Embedded" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.*">
+		<PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="9.2.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
