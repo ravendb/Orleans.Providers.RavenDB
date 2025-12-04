@@ -75,7 +75,7 @@ public static class RavenDbGrainStorageExtensions
         services.ConfigureNamedOptionForLogging<RavenDbGrainStorageOptions>(name);
         services.AddTransient<IPostConfigureOptions<RavenDbGrainStorageOptions>, RavenDbGrainStorageConfigurator>();
 
-        services.AddKeyedSingleton(name, (sp, key) => RavenDbGrainStorageFactory.Create(sp, key as string));
+        services.AddKeyedSingleton(name, (sp, key) => RavenDbGrainStorageFactory.Create(sp, key as string ?? string.Empty));
         if (string.Equals(name, ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME, StringComparison.Ordinal))
             services.AddSingleton(sp => sp.GetKeyedService<IGrainStorage>(ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME));
 

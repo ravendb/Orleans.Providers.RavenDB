@@ -17,7 +17,7 @@ namespace Orleans.Providers.RavenDb.Reminders
     {
         private readonly RavenDbReminderOptions _options;
         private readonly ILogger<RavenDbReminderTable> _logger;
-        private IDocumentStore _documentStore;
+        private IDocumentStore? _documentStore;
         private readonly Lazy<Task> _initDatabase;
 
         public RavenDbReminderTable(RavenDbReminderOptions options, ILogger<RavenDbReminderTable> logger)
@@ -70,7 +70,7 @@ namespace Orleans.Providers.RavenDb.Reminders
             _logger.LogDebug("Reading reminder rows for GrainId={GrainId}", grainId);
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
+                using var session = _documentStore!.OpenAsyncSession();
                 var reminders = await session.Advanced.LoadStartingWithAsync<RavenDbReminderDocument>($"reminders/{grainId}/");
 
                 var entries = reminders.Select(r => new ReminderEntry
@@ -102,7 +102,7 @@ namespace Orleans.Providers.RavenDb.Reminders
             _logger.LogDebug("Reading reminder rows for Range {BeginHash} to {EndHash}", begin, end);
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
+                using var session = _documentStore!.OpenAsyncSession();
 
                 List<RavenDbReminderDocument>? reminders;
                 if (begin < end)
@@ -143,12 +143,12 @@ namespace Orleans.Providers.RavenDb.Reminders
         /// <param name="grainId">The grain ID.</param>
         /// <param name="reminderName">The name of the reminder.</param>
         /// <returns>The matching <see cref="ReminderEntry"/> or null if not found.</returns>
-        public async Task<ReminderEntry> ReadRow(GrainId grainId, string reminderName)
+        public async Task<ReminderEntry?> ReadRow(GrainId grainId, string reminderName)
         {
             _logger.LogDebug("Reading single reminder row for GrainId={GrainId}, ReminderName={ReminderName}", grainId, reminderName);
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
+                using var session = _documentStore!.OpenAsyncSession();
                 var key = GetKey(grainId, reminderName);
 
                 var reminder = await session.LoadAsync<RavenDbReminderDocument>(key);
@@ -183,7 +183,7 @@ namespace Orleans.Providers.RavenDb.Reminders
             _logger.LogDebug("Upserting reminder row for GrainId={GrainId}, ReminderName={ReminderName}", entry.GrainId, entry.ReminderName);
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
+                using var session = _documentStore!.OpenAsyncSession();
 
                 if (_options.WaitForIndexesAfterSaveChanges)
                     session.Advanced.WaitForIndexesAfterSaveChanges();
@@ -226,7 +226,7 @@ namespace Orleans.Providers.RavenDb.Reminders
 
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
+                using var session = _documentStore!.OpenAsyncSession();
                 var key = GetKey(grainId, reminderName);
 
                 session.Delete(key, expectedChangeVector: eTag);
@@ -251,7 +251,7 @@ namespace Orleans.Providers.RavenDb.Reminders
         /// </summary>
         public async Task TestOnlyClearTable()
         {
-            using var session = _documentStore.OpenAsyncSession();
+            using var session = _documentStore!.OpenAsyncSession();
             var query = await session.Query<RavenDbReminderDocument>().ToListAsync();
             foreach (var entry in query) 
                 session.Delete(entry);

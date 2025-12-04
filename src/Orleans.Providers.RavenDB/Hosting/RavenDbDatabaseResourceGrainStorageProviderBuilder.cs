@@ -11,7 +11,7 @@ namespace Orleans.Providers.RavenDb.Hosting
         public void Configure(ISiloBuilder builder, string? name, IConfigurationSection section)
         {
             RavenDbDatabaseResourceClusteringProviderBuilder.ConfigureSectionFromServiceKey(builder.Configuration, section);
-            builder.AddRavenDbGrainStorage(name, section.Bind);
+            builder.AddRavenDbGrainStorage(name ?? string.Empty, section.Bind);
         }
     }
 }
