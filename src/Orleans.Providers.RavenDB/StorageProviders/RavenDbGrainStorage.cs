@@ -19,7 +19,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
     {
         private readonly RavenDbGrainStorageOptions _options;
         private readonly ILogger<RavenDbGrainStorage> _logger;
-        private IDocumentStore _documentStore;
+        private IDocumentStore? _documentStore;
         private readonly TransactionMode _transactionMode;
 
         public RavenDbGrainStorage(IServiceProvider services, RavenDbGrainStorageOptions options, ILogger<RavenDbGrainStorage> logger)
@@ -46,7 +46,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             _logger.LogDebug("Reading state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
             try
             {
-                using var session = _documentStore.OpenAsyncSession();
+                using var session = _documentStore!.OpenAsyncSession();
 
                 string key = GetKey<T>(stateName, grainId);
                 
@@ -82,7 +82,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
 
             try
             {
-                using var session = _documentStore.OpenAsyncSession(new SessionOptions
+                using var session = _documentStore!.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = _transactionMode,
                 });
@@ -133,7 +133,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
 
             try
             {
-                using var session = _documentStore.OpenAsyncSession(new SessionOptions
+                using var session = _documentStore!.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = _transactionMode
                 });
@@ -170,7 +170,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
         {
             try
             {
-                _logger.LogInformation("Initializing RavenDB document store for database '{DatabaseName}' at URLs: {Urls}", _options.DatabaseName, string.Join(", ", _options.Urls));
+                _logger.LogInformation("Initializing RavenDB document store for database '{DatabaseName}' at URLs: {Urls}", _options.DatabaseName, string.Join(", ", _options.Urls ?? []));
 
                 _documentStore = new DocumentStore
                 {

@@ -6,7 +6,6 @@ using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 using SiloAddressClass = Orleans.Runtime.SiloAddress;
 
-
 namespace Orleans.Providers.RavenDb.Membership;
 
 /// <summary>
@@ -16,7 +15,7 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
 {
     private readonly RavenDbMembershipOptions _options;
     private readonly ILogger _logger;
-    private IDocumentStore _documentStore;
+    private IDocumentStore? _documentStore;
 
     /// <summary>
     /// The maximum duration a gateway list can be stale before being refreshed.
@@ -66,8 +65,7 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
 
         try
         {
-
-            using var session = _documentStore.OpenAsyncSession(_options.DatabaseName);
+            using var session = _documentStore!.OpenAsyncSession(_options.DatabaseName);
             var gateways = await session.Query<MembershipEntryDocument, RavenDbMembershipTable.MembershipByClusterIdAliveTimeStatusAndPort>()
                 .Where(entry => entry.ClusterId == _options.ClusterId && entry.Status == SiloStatus.Active.ToString() && entry.ProxyPort > 0)
                 .ToListAsync();

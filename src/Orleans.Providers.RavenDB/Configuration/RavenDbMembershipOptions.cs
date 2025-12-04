@@ -8,7 +8,7 @@
         /// <summary>
         /// The unique identifier of the Orleans cluster. This is used to scope membership data in RavenDB.
         /// </summary>
-        public string ClusterId { get; set; }
+        public string? ClusterId { get; set; }
 
         /// <summary>
         /// Optional identifier used to support multiple Orleans ServiceIds within the same database.

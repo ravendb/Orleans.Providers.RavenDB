@@ -9,27 +9,27 @@
         /// <summary>
         /// The unique identifier of the cluster this membership entry belongs to.
         /// </summary>
-        public string ClusterId { get; set; }
+        public string ClusterId { get; set; } = string.Empty;
 
         /// <summary>
         /// The unique name of the silo.
         /// </summary>
-        public string SiloName { get; set; }
+        public string SiloName { get; set; } = string.Empty;
 
         /// <summary>
         /// The silo's network address in string form.
         /// </summary>
-        public string SiloAddress { get; set; }
+        public string SiloAddress { get; set; } = string.Empty;
 
         /// <summary>
         /// The hostname of the machine running the silo.
         /// </summary>
-        public string HostName { get; set; }
+        public string HostName { get; set; } = string.Empty;
 
         /// <summary>
         /// The current status of the silo (e.g., Active, Dead, etc.).
         /// </summary>
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         /// <summary>
         /// The proxy port used by the silo.
@@ -49,17 +49,17 @@
         /// <summary>
         /// The role name assigned to the silo.
         /// </summary>
-        public string RoleName { get; set; }
+        public string RoleName { get; set; } = string.Empty;
 
         /// <summary>
         /// A list of suspect times, representing silos that have been suspected of failure.
         /// </summary>
-        public List<SuspectTime> SuspectTimes { get; set; }
+        public List<SuspectTime>? SuspectTimes { get; set; }
 
         /// <summary>
         /// Identifies the ServiceId this membership entry belongs to. Used to support multiple ServiceIds in the same database.
         /// </summary>
-        public string ServiceId { get; set; }
+        public string ServiceId { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -71,7 +71,7 @@
         /// <summary>
         /// The deployment or cluster identifier this version document belongs to.
         /// </summary>
-        public string DeploymentId { get; set; }
+        public string DeploymentId { get; set; } = string.Empty;
 
         /// <summary>
         /// The current global version of the membership table.
@@ -81,7 +81,7 @@
         /// <summary>
         /// Identifies the ServiceId this table version belongs to. Used to isolate versioning across multiple ServiceIds.
         /// </summary>
-        public string ServiceId { get; set; }
+        public string ServiceId { get; set; } = string.Empty;
 
     }
 
@@ -94,12 +94,12 @@
         /// <summary>
         /// The address of the suspected silo, serialized as a string.
         /// </summary>
-        public string Address { get; set; }
+        public string Address { get; set; } = string.Empty;
 
         /// <summary>
         /// The time when the suspicion was recorded, serialized as a string.
         /// </summary>
-        public string IAmAliveTime { get; set; }
+        public string IAmAliveTime { get; set; } = string.Empty;
 
         public static SuspectTime Create(Tuple<SiloAddress, DateTime> tuple)
         {

@@ -8,17 +8,17 @@
         /// <summary>
         /// The unique document identifier in RavenDB.
         /// </summary>
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         /// <summary>
         /// The serialized grain ID associated with the reminder.
         /// </summary>
-        public string GrainId { get; set; }
+        public string GrainId { get; set; } = string.Empty;
 
         /// <summary>
         /// The name of the reminder.
         /// </summary>
-        public string ReminderName { get; set; }
+        public string ReminderName { get; set; } = string.Empty;
 
         /// <summary>
         /// The time at which the reminder was first scheduled to fire.

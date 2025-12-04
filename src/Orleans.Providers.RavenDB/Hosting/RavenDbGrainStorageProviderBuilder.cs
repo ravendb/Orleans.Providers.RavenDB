@@ -9,7 +9,7 @@ namespace Orleans.Providers.RavenDb.Hosting
     {
         public void Configure(ISiloBuilder builder, string? name, IConfigurationSection section)
         {
-            builder.AddRavenDbGrainStorage(name, section.Bind);
+            builder.AddRavenDbGrainStorage(name ?? string.Empty, section.Bind);
         }
     }
 }

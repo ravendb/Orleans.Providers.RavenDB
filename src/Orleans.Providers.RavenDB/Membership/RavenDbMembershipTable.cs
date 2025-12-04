@@ -15,10 +15,10 @@ namespace Orleans.Providers.RavenDb.Membership;
 /// </summary>
 public class RavenDbMembershipTable : IMembershipTable
 {
-    private IDocumentStore _documentStore;
+    private IDocumentStore? _documentStore;
     private readonly RavenDbMembershipOptions _options;
     private readonly ILogger<RavenDbMembershipTable> _logger;
-    private readonly string _databaseName;
+    private readonly string? _databaseName;
     private readonly string _clusterId;
     private readonly string _serviceId;
 
@@ -82,7 +82,7 @@ public class RavenDbMembershipTable : IMembershipTable
 
             if (tryInitTable)
             {
-                using var session = _documentStore.OpenAsyncSession(_databaseName);
+                using var session = _documentStore!.OpenAsyncSession(_databaseName);
                 // Check for existing entries or ensure the database exists
                 var count = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
                     .Where(x => x.ClusterId == _clusterId && x.ServiceId == _serviceId)
@@ -112,7 +112,7 @@ public class RavenDbMembershipTable : IMembershipTable
         {
             var tableVersionDocId = GetTableVersionDocId();
 
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
             var docId = GetDocumentId(key);
             var document = await session.LoadAsync<MembershipEntryDocument>(docId,
                 builder => builder.IncludeDocuments<TableVersionDocument>(x => tableVersionDocId));
@@ -148,7 +148,7 @@ public class RavenDbMembershipTable : IMembershipTable
 
         try
         {
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
 
             var tableVersionDocId = GetTableVersionDocId();
 
@@ -185,7 +185,7 @@ public class RavenDbMembershipTable : IMembershipTable
 
         try
         {
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
 
             var versionDocId = GetTableVersionDocId();
 
@@ -252,7 +252,7 @@ public class RavenDbMembershipTable : IMembershipTable
             var documentId = GetDocumentId(entry.SiloAddress);
             var tableVersionDocId = GetTableVersionDocId();
 
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
             var document = await session.LoadAsync<MembershipEntryDocument>(documentId, builder => builder.IncludeDocuments(x => tableVersionDocId));
 
             if (document == null || session.Advanced.GetChangeVectorFor(document) != etag)
@@ -311,7 +311,7 @@ public class RavenDbMembershipTable : IMembershipTable
 
         try
         {
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
             var documentId = GetDocumentId(entry.SiloAddress); // Convert SiloAddress to string
             var document = await session.LoadAsync<MembershipEntryDocument>(documentId);
 
@@ -341,7 +341,7 @@ public class RavenDbMembershipTable : IMembershipTable
 
         try
         {
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
             var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
                 .Where(e => e.ClusterId == clusterId)
                 .ToListAsync();
@@ -371,7 +371,7 @@ public class RavenDbMembershipTable : IMembershipTable
 
         try
         {
-            using var session = _documentStore.OpenAsyncSession(_databaseName);
+            using var session = _documentStore!.OpenAsyncSession(_databaseName);
             var tableVersionDocId = GetTableVersionDocId();
 
             var defunctEntries = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
@@ -408,7 +408,7 @@ public class RavenDbMembershipTable : IMembershipTable
             StartTime = document.StartTime,
             IAmAliveTime = document.IAmAliveTime,
             RoleName = document.RoleName,
-            SuspectTimes = document.SuspectTimes.Select(x => x.ToTuple()).ToList()
+            SuspectTimes = document.SuspectTimes?.Select(x => x.ToTuple()).ToList()
         };
     }
 

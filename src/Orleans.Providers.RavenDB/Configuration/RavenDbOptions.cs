@@ -12,22 +12,22 @@ namespace Orleans.Providers.RavenDb.Configuration
         /// <summary>
         /// The name of the RavenDB database to connect to.
         /// </summary>
-        public string DatabaseName { get; set; }
+        public string? DatabaseName { get; set; }
 
         /// <summary>
         /// The client certificate used to authenticate with the RavenDB server.
         /// </summary>
-        public X509Certificate2 Certificate { get; set; }
+        public X509Certificate2? Certificate { get; set; }
 
         /// <summary>
         /// The set of conventions used by the RavenDB client for serialization and document behavior.
         /// </summary>
-        public DocumentConventions Conventions { get; set; }
+        public DocumentConventions? Conventions { get; set; }
 
         /// <summary>
         /// An array of URLs pointing to the RavenDB server nodes.
         /// </summary>
-        public string[] Urls { get; set; }
+        public string[]? Urls { get; set; }
 
         /// <summary>
         /// Whether to wait for index updates after saving changes to ensure query consistency.
