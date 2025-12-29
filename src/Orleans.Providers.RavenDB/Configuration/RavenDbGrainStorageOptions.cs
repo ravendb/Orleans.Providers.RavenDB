@@ -16,6 +16,12 @@
         /// </summary>
         public bool UseClusterWideTransactions { get; set; } = false;
 
+        /// <summary>
+        /// An optional separator to use when generating grain keys.
+        /// If not provided, the default separator ('/') will be used.
+        /// </summary>
+        public string? GrainKeySeparator { get; set; } = null;
+
     }
 
     /// <summary>
