@@ -222,7 +222,8 @@ namespace Orleans.Providers.RavenDb.StorageProviders
                 return _options.KeyGenerator(grainType, grainId);
 
             var typeName = grainType != "state" ? grainType : typeof(T).Name;
-            return $"{typeName}/{grainId}";
+            var separator = _options.GrainKeySeparator ?? "/";
+            return $"{typeName}{separator}{grainId}";
         }
     }
 }
