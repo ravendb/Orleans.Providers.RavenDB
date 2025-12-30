@@ -37,15 +37,16 @@ namespace Orleans.Providers.RavenDb.Hosting
             if (!csBuilder.TryGetValue("Database", out var databaseName))
                 throw new InvalidOperationException("RavenDB connection string is missing 'Database'.");
 
-            section["Urls:0"] = url.ToString();
-            section["DatabaseName"] = databaseName.ToString();
+            SetIfMissing(section, "Urls:0", url.ToString());
+            SetIfMissing(section, "DatabaseName", databaseName.ToString());
 
             foreach (string key in csBuilder.Keys)
             {
-                if (key.ToLower() is "url" or "database")
+                if (key.Equals("url", StringComparison.OrdinalIgnoreCase) ||
+                    key.Equals("database", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                section[key] = csBuilder[key].ToString();
+                SetIfMissing(section, key, csBuilder[key].ToString());
             }
 
             var clusterIdOption = section["ClusterId"];
@@ -58,6 +59,15 @@ namespace Orleans.Providers.RavenDb.Hosting
                     section["ClusterId"] = clusterId.Value;
                 }
             }
+        }
+
+        private static void SetIfMissing(IConfigurationSection section, string key, string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return;
+
+            if (string.IsNullOrEmpty(section[key]))
+                section[key] = value;
         }
     }
 }
