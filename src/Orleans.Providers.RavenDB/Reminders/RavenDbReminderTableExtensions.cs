@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Providers.RavenDb.Configuration;
 
 namespace Orleans.Providers.RavenDb.Reminders
@@ -18,9 +19,10 @@ namespace Orleans.Providers.RavenDb.Reminders
         {
             return builder.ConfigureServices(services =>
             {
-                var options = new RavenDbReminderOptions();
-                configureOptions(options);
-                services.AddSingleton(options);
+                services.AddOptions<RavenDbReminderOptions>()
+                    .Configure(configureOptions);
+
+                services.AddSingleton(sp => sp.GetRequiredService<IOptions<RavenDbReminderOptions>>().Value);
 
                 services.AddReminders();
                 services.AddSingleton<IReminderTable, RavenDbReminderTable>();

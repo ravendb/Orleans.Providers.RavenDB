@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 
@@ -19,9 +20,11 @@ public static class RavenDbMembershipTableExtensions
     {
         return builder.ConfigureServices(services =>
         {
-            var options = new RavenDbMembershipOptions();
-            configureOptions(options);
-            services.AddSingleton(options);
+            services.AddOptions<RavenDbMembershipOptions>()
+                .Configure(configureOptions);
+
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<RavenDbMembershipOptions>>().Value);
+
             services.AddSingleton<IMembershipTable, RavenDbMembershipTable>();
         });
     }
@@ -37,14 +40,15 @@ public static class RavenDbMembershipTableExtensions
     {
         return builder.ConfigureServices(services =>
         {
-            var options = new RavenDbMembershipOptions
-            {
-                DocumentStore = documentStore
-            };
+            services.AddOptions<RavenDbMembershipOptions>()
+                .Configure(o =>
+                {
+                    o.DocumentStore = documentStore;
+                    configureOptions?.Invoke(o);
+                });
 
-            configureOptions?.Invoke(options);
+            services.AddSingleton(sp => sp.GetRequiredService<IOptions<RavenDbMembershipOptions>>().Value);
 
-            services.AddSingleton(options);
             services.AddSingleton<IMembershipTable, RavenDbMembershipTable>();
         });
     }
