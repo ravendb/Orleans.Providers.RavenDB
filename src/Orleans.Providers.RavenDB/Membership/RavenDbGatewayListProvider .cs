@@ -37,10 +37,19 @@ public class RavenDbGatewayListProvider : IGatewayListProvider
     {
         try
         {
+            if (_options.DocumentStore != null)
+            {
+                _documentStore = _options.DocumentStore;
+                _logger.LogInformation("Using externally provided DocumentStore.");
+                return Task.CompletedTask;
+            }
+
             _documentStore = new DocumentStore
             {
                 Urls = _options.Urls,
-                Database = _options.DatabaseName
+                Database = _options.DatabaseName,
+                Certificate = _options.Certificate,
+                Conventions = _options.Conventions
             }.Initialize();
 
             _logger.LogInformation("Initializing RavenDB Gateway List Provider for ClusterId='{ClusterId}'", _options.ClusterId);
