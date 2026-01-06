@@ -11,7 +11,7 @@
 	<ItemGroup>
 		<PackageReference Include="RavenDB.Client" Version="6.2.0" />
 		<PackageReference Include="Microsoft.Orleans.Reminders" Version="9.1.2" />
-		<PackageReference Include="Microsoft.Orleans.Sdk" Version="9.*" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.Orleans.Sdk" Version="9.1.2" PrivateAssets="all" />
 	</ItemGroup>
 
 </Project>
