@@ -170,15 +170,25 @@ namespace Orleans.Providers.RavenDb.StorageProviders
         {
             try
             {
-                _logger.LogInformation("Initializing RavenDB document store for database '{DatabaseName}' at URLs: {Urls}", _options.DatabaseName, string.Join(", ", _options.Urls ?? []));
-
-                _documentStore = new DocumentStore
+                if (_options.DocumentStore != null)
                 {
-                    Database = _options.DatabaseName,
-                    Certificate = _options.Certificate,
-                    Conventions = _options.Conventions,
-                    Urls = _options.Urls
-                }.Initialize();
+                    _documentStore = _options.DocumentStore;
+                    _logger.LogInformation("Using externally provided DocumentStore.");
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Initializing RavenDB document store for database '{DatabaseName}' at URLs: {Urls}",
+                        _options.DatabaseName, string.Join(", ", _options.Urls ?? []));
+
+                    _documentStore = new DocumentStore
+                    {
+                        Database = _options.DatabaseName,
+                        Certificate = _options.Certificate,
+                        Conventions = _options.Conventions,
+                        Urls = _options.Urls
+                    }.Initialize();
+                }
 
                 if (_options.EnsureDatabaseExists)
                 {

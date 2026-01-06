@@ -32,18 +32,30 @@ namespace Orleans.Providers.RavenDb.Reminders
         {
             try
             {
-                _documentStore = new DocumentStore
+                if (_options.DocumentStore != null)
                 {
-                    Database = _options.DatabaseName,
-                    Urls = _options.Urls,
-                    Certificate = _options.Certificate,
-                    Conventions = _options.Conventions
-                };
-                _documentStore.Initialize();
+                    _documentStore = _options.DocumentStore;
+                    _logger.LogInformation("Using externally provided DocumentStore.");
+                }
+                else
+                {
+                    _documentStore = new DocumentStore
+                    {
+                        Database = _options.DatabaseName,
+                        Urls = _options.Urls,
+                        Certificate = _options.Certificate,
+                        Conventions = _options.Conventions
+                    }.Initialize();
 
-                var dbExists = await _documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
-                if (dbExists == false)
-                    await _documentStore.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                    _logger.LogInformation("RavenDB Reminder Table DocumentStore initialized successfully.");
+                }
+
+                if (_options.EnsureDatabaseExists)
+                {
+                    var dbExists = await _documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
+                    if (dbExists == false)
+                        await _documentStore.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                }
 
                 var indexes = await _documentStore.Maintenance.SendAsync(new GetIndexNamesOperation(0, int.MaxValue));
                 if (indexes.Contains(nameof(ReminderDocumentsByHash)))

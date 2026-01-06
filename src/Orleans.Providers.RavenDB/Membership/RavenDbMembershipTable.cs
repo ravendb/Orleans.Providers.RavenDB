@@ -40,17 +40,19 @@ public class RavenDbMembershipTable : IMembershipTable
             {
                 _documentStore = _options.DocumentStore;
                 _logger.LogInformation("Using externally provided DocumentStore.");
-                return;
             }
-
-            _documentStore = new DocumentStore
+            else
             {
-                Database = _options.DatabaseName,
-                Urls = _options.Urls,
-                Certificate = _options.Certificate,
-                Conventions = _options.Conventions
-            };
-            _documentStore.Initialize();
+                _documentStore = new DocumentStore
+                {
+                    Database = _options.DatabaseName,
+                    Urls = _options.Urls,
+                    Certificate = _options.Certificate,
+                    Conventions = _options.Conventions
+                }.Initialize();
+
+                _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
+            }
 
             if (_options.EnsureDatabaseExists)
             {
@@ -64,7 +66,6 @@ public class RavenDbMembershipTable : IMembershipTable
             if (indexes.Contains(nameof(MembershipByClusterIdAliveTimeStatusAndPort)) == false)
                 new MembershipByClusterIdAliveTimeStatusAndPort().Execute(_documentStore);
 
-            _logger.LogInformation("RavenDB Membership Table DocumentStore initialized successfully.");
         }
         catch (Exception ex)
         {
