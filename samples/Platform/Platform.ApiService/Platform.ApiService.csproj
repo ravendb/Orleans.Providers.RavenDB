@@ -13,12 +13,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Seq" Version="9.5.1" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Orleans.Client" Version="9.1.2" />
-	  <PackageReference Include="Serilog" Version="4.3.0" />
-	  <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
+    <PackageReference Include="Aspire.Seq" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Orleans.Client" />
+	  <PackageReference Include="Serilog" />
+	  <PackageReference Include="Serilog.Sinks.Seq" />
   </ItemGroup>
 
 </Project>

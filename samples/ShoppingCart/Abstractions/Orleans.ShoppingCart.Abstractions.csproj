@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Orleans.Sdk" Version="8.*" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" />
   </ItemGroup>
 
 </Project>
