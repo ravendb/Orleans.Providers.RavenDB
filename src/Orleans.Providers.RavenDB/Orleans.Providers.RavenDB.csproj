@@ -9,9 +9,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="RavenDB.Client" Version="6.2.0" />
-		<PackageReference Include="Microsoft.Orleans.Reminders" Version="9.1.2" />
-		<PackageReference Include="Microsoft.Orleans.Sdk" Version="9.1.2" PrivateAssets="all" />
+		<PackageReference Include="RavenDB.Client" />
+		<PackageReference Include="Microsoft.Orleans.Reminders" />
+		<PackageReference Include="Microsoft.Orleans.Sdk" PrivateAssets="all" />
 	</ItemGroup>
 
 </Project>
