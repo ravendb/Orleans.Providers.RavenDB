@@ -53,5 +53,6 @@ public sealed class InventoryGrain(
 [GenerateSerializer]
 public class InventoryState
 {
+    [Id(0)]
     public HashSet<string> Items { get; set; } = new HashSet<string>();
 }

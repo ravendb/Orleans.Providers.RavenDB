@@ -1,0 +1,55 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Aspire.Seq" Version="13.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.9" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Reminders" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.CodeGenerator" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.Cosmos" Version="9.2.1" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.Cosmos" Version="9.2.1" />
+    <PackageVersion Include="Serilog" Version="4.3.0" />
+    <PackageVersion Include="Serilog.Sinks.Seq" Version="9.0.0" />
+
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Orleans" Version="13.0.0" />
+    <PackageVersion Include="Aspire.Hosting.Seq" Version="13.0.0" />
+    <PackageVersion Include="CommunityToolkit.Aspire.Hosting.RavenDB" Version="13.0.0" />
+
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.4.0" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.5.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
+
+    <PackageVersion Include="Azure.Identity" Version="1.12.0" />
+    <PackageVersion Include="Blazor.Serialization" Version="8.0.0" />
+    <PackageVersion Include="Blazor.LocalStorage" Version="8.0.0" />
+    <PackageVersion Include="Bogus" Version="35.5.0" />
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
+    <PackageVersion Include="MudBlazor" Version="6.17.0" />
+
+    <PackageVersion Include="Spectre.Console" Version="0.48.0" />
+    <PackageVersion Include="Spectre.Console.ImageSharp" Version="0.48.0" />
+
+    <PackageVersion Include="RavenDB.Client" Version="6.2.0" />
+    <PackageVersion Include="RavenDB.Embedded" Version="7.0.0" />
+
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.console" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.1" />
+
+    <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
+  </ItemGroup>
+</Project>

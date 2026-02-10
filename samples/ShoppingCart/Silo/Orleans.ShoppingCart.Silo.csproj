@@ -9,15 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.12.0" />
-    <PackageReference Include="Blazor.Serialization" Version="8.0.0" />
-    <PackageReference Include="Blazor.LocalStorage" Version="8.0.0" />
-    <PackageReference Include="Bogus" Version="35.5.0" />
-    <PackageReference Include="Microsoft.Orleans.Clustering.Cosmos" Version="8.*" />
-    <PackageReference Include="Microsoft.Orleans.Persistence.Cosmos" Version="8.*" />
-    <PackageReference Include="Microsoft.Orleans.Server" Version="9.*" />
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
-    <PackageReference Include="MudBlazor" Version="6.17.0" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Blazor.Serialization" />
+    <PackageReference Include="Blazor.LocalStorage" />
+    <PackageReference Include="Bogus" />
+    <PackageReference Include="Microsoft.Orleans.Clustering.Cosmos" />
+    <PackageReference Include="Microsoft.Orleans.Persistence.Cosmos" />
+    <PackageReference Include="Microsoft.Orleans.Server" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <PackageReference Include="MudBlazor" />
   </ItemGroup>
 
   <ItemGroup>
