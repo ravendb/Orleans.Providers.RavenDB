@@ -145,6 +145,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
 
                 grainState.RecordExists = false;
                 grainState.ETag = null;
+                grainState.State = Activator.CreateInstance<T>();
             }
             catch (Exception ex)
             {
