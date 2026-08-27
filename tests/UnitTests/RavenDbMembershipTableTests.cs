@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Orleans;
 using Orleans.Messaging;
 using Orleans.Providers.RavenDb.Configuration;
@@ -101,5 +103,27 @@ public class RavenDbMembershipTableTests : MembershipTableTestsBase, IClassFixtu
     public async Task Test_UpdateIAmAlive()
     {
         await MembershipTable_UpdateIAmAlive();
+    }
+
+    [Fact]
+    public void Test_DeleteMembershipTableEntries_AwaitsQueryInsteadOfBlocking()
+    {
+        var method = typeof(RavenDbMembershipTable).GetMethod(nameof(IMembershipTable.DeleteMembershipTableEntries));
+        Assert.NotNull(method);
+
+        var stateMachine = method!.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType;
+        Assert.NotNull(stateMachine);
+
+        // Blocking on Task.Result leaves no awaiter for the query in the generated state machine,
+        // so its presence is a direct, deterministic signal that the query is awaited. Asserting
+        // this by reflection rather than by timing avoids a test that depends on a deadlock
+        // actually occurring, which is scheduler-dependent and would be flaky.
+        var awaitsQuery = stateMachine!
+            .GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+            .Any(field => field.FieldType == typeof(TaskAwaiter<List<MembershipEntryDocument>>));
+
+        Assert.True(awaitsQuery,
+            "DeleteMembershipTableEntries must await the membership query. Blocking on Task.Result "
+            + "occupies an Orleans scheduler thread for the duration of a network round trip and can deadlock the silo.");
     }
 }

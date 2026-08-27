@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -343,11 +343,11 @@ public class RavenDbMembershipTable : IMembershipTable
         try
         {
             using var session = _documentStore!.OpenAsyncSession(_databaseName);
-            var entriesToDelete = session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
+            var entriesToDelete = await session.Query<MembershipEntryDocument, MembershipByClusterIdAliveTimeStatusAndPort>()
                 .Where(e => e.ClusterId == clusterId)
                 .ToListAsync();
 
-            foreach (var entry in entriesToDelete.Result)
+            foreach (var entry in entriesToDelete)
             {
                 session.Delete(entry);
             }
