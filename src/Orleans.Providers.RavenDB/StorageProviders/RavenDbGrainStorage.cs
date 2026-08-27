@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
 using Orleans.Serialization;
 using Orleans.Storage;
@@ -167,7 +167,7 @@ namespace Orleans.Providers.RavenDb.StorageProviders
         /// Initializes the RavenDB document store.
         /// </summary>
         /// <param name="ct">The cancellation token.</param>
-        private Task Init(CancellationToken ct)
+        private async Task Init(CancellationToken ct)
         {
             try
             {
@@ -193,13 +193,11 @@ namespace Orleans.Providers.RavenDb.StorageProviders
 
                 if (_options.EnsureDatabaseExists)
                 {
-                    // Ensure the database exists
-                    var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
-                    if (dbExists == false)
-                        _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                    await RavenDbDatabaseInitializer.EnsureDatabaseExistsAsync(
+                        _documentStore,
+                        _options.DatabaseName!,
+                        ct);
                 }
-
-                return Task.CompletedTask;
             }
             catch (Exception ex)
             {

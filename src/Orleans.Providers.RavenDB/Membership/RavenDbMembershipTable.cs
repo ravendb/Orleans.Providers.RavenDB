@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -32,7 +32,7 @@ public class RavenDbMembershipTable : IMembershipTable
         _serviceId = options.ServiceId ?? _clusterId; // use ClusterId as default ServiceId if not provided
     }
 
-    private void InitializeDocumentStore()
+    private async Task InitializeDocumentStoreAsync()
     {
         try
         {
@@ -56,15 +56,14 @@ public class RavenDbMembershipTable : IMembershipTable
 
             if (_options.EnsureDatabaseExists)
             {
-                // Ensure the database exists
-                var dbExists = _documentStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
-                if (dbExists == false)
-                    _documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                await RavenDbDatabaseInitializer.EnsureDatabaseExistsAsync(
+                    _documentStore,
+                    _options.DatabaseName!);
             }
 
-            var indexes = _documentStore.Maintenance.Send(new GetIndexNamesOperation(0, int.MaxValue));
+            var indexes = await _documentStore.Maintenance.SendAsync(new GetIndexNamesOperation(0, int.MaxValue));
             if (indexes.Contains(nameof(MembershipByClusterIdAliveTimeStatusAndPort)) == false)
-                new MembershipByClusterIdAliveTimeStatusAndPort().Execute(_documentStore);
+                await new MembershipByClusterIdAliveTimeStatusAndPort().ExecuteAsync(_documentStore);
 
         }
         catch (Exception ex)
@@ -79,7 +78,7 @@ public class RavenDbMembershipTable : IMembershipTable
         _logger.LogInformation("Initializing RavenDB Membership Table for ClusterId={ClusterId}", _options.ClusterId);
         try
         {
-            InitializeDocumentStore();
+            await InitializeDocumentStoreAsync();
 
             if (tryInitTable)
             {
