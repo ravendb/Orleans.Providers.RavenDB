@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -52,9 +52,9 @@ namespace Orleans.Providers.RavenDb.Reminders
 
                 if (_options.EnsureDatabaseExists)
                 {
-                    var dbExists = await _documentStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(_options.DatabaseName)) != null;
-                    if (dbExists == false)
-                        await _documentStore.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(_options.DatabaseName)));
+                    await RavenDbDatabaseInitializer.EnsureDatabaseExistsAsync(
+                        _documentStore,
+                        _options.DatabaseName!);
                 }
 
                 var indexes = await _documentStore.Maintenance.SendAsync(new GetIndexNamesOperation(0, int.MaxValue));
