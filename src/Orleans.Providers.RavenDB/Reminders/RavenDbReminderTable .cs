@@ -90,7 +90,8 @@ namespace Orleans.Providers.RavenDb.Reminders
                     GrainId = GrainId.Parse(r.GrainId),
                     ReminderName = r.ReminderName,
                     StartAt = r.StartAt,
-                    Period = r.Period
+                    Period = r.Period,
+                    ETag = session.Advanced.GetChangeVectorFor(r)
                 }).ToList();
 
                 return new ReminderTableData(entries);
