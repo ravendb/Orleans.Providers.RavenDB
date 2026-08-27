@@ -94,6 +94,27 @@ namespace UnitTests
         }
 
         [Fact]
+        public async Task GrainStorage_ConcurrencyViolation_PreservesCauseAsInnerException()
+        {
+            var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());
+
+            await grain.AddItem(new Product { Name = "Test Product", Price = 100 });
+
+            // Simulate external modification between read & write
+            await grain.OnBeforeWriteStateAsync(script: "this.TotalPrice += 5");
+
+            var exception = await Assert.ThrowsAsync<OrleansException>(async () =>
+            {
+                await grain.AddItem(new Product { Name = "Product2", Price = 15 });
+            });
+
+            // Distinguishing a write conflict, which is worth retrying, from any other storage
+            // failure means inspecting the cause. Message text is not a stable thing to branch on.
+            Assert.NotNull(exception.InnerException);
+            Assert.Contains("ConcurrencyException", exception.InnerException!.Message);
+        }
+
+        [Fact]
         public async Task GrainStorage_ShouldHandleClearForNonExistentState()
         {
             var grain = _fixture.Client.GetGrain<IOrderGrain>(Guid.NewGuid());

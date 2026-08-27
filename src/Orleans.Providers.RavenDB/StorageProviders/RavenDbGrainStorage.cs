@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
 using Orleans.Serialization;
 using Orleans.Storage;
@@ -111,7 +111,14 @@ namespace Orleans.Providers.RavenDb.StorageProviders
             catch (Raven.Client.Exceptions.ConcurrencyException ex)
             {
                 _logger.LogWarning(ex, "Concurrency exception writing state for stateName={StateName}, grainId={GrainId}", stateName, grainId);
-                throw new OrleansException($"Concurrency exception writing state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}");
+                // The cause is carried as a plain exception rather than as ex itself. Orleans
+                // serializes exceptions when they cross a grain boundary and has no codec for
+                // RavenDB's ConcurrencyException, so attaching it directly replaces this
+                // exception with a CodecNotFoundException on the caller. This keeps the failing
+                // type and message available for diagnosis while still crossing the wire.
+                throw new OrleansException(
+                    $"Concurrency exception writing state for grain {grainId}. Exception={Environment.NewLine}{ex.Message}",
+                    new Exception($"{ex.GetType().FullName}: {ex.Message}"));
             }
             catch (Exception ex)
             {
