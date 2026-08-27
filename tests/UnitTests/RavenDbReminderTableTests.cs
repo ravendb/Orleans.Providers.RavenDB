@@ -2,6 +2,7 @@
 using Orleans;
 using Orleans.Providers.RavenDb.Configuration;
 using Orleans.Providers.RavenDb.Reminders;
+using Orleans.Runtime;
 using TestExtensions;
 using UnitTests;
 using UnitTests.Infrastructure;
@@ -63,5 +64,30 @@ public class RavenDbReminderTableTests : ReminderTableTestsBase, IClassFixture<R
     public async Task RavenDbReminderTable_TestReminderSimple()
     {
         await ReminderSimple();
+    }
+
+    [Fact]
+    public async Task RavenDbReminderTable_ReadRowsByGrainId_ReturnsUsableETag()
+    {
+        IReminderTable table = new RavenDbReminderTable(Options, loggerFactory.CreateLogger<RavenDbReminderTable>());
+        await table.StartAsync(CancellationToken.None);
+
+        var grainId = GrainId.Create("reminder-etag-test", Guid.NewGuid().ToString("N"));
+        await table.UpsertRow(new ReminderEntry
+        {
+            GrainId = grainId,
+            ReminderName = "read-rows-etag",
+            StartAt = DateTime.UtcNow,
+            Period = TimeSpan.FromMinutes(1)
+        });
+
+        var rows = await table.ReadRows(grainId);
+        var row = Assert.Single(rows.Reminders);
+
+        // ReadRows(uint, uint) and ReadRow(GrainId, string) both return the change vector, and
+        // Orleans treats ETag as the concurrency token. Asserting that a removal driven by this
+        // overload's token succeeds proves the token is genuinely usable, not merely non-empty.
+        Assert.False(string.IsNullOrEmpty(row.ETag));
+        Assert.True(await table.RemoveRow(grainId, row.ReminderName, row.ETag));
     }
 }

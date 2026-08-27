@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Orleans.Providers.RavenDb.Configuration;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -90,7 +90,8 @@ namespace Orleans.Providers.RavenDb.Reminders
                     GrainId = GrainId.Parse(r.GrainId),
                     ReminderName = r.ReminderName,
                     StartAt = r.StartAt,
-                    Period = r.Period
+                    Period = r.Period,
+                    ETag = session.Advanced.GetChangeVectorFor(r)
                 }).ToList();
 
                 return new ReminderTableData(entries);
